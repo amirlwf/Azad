@@ -2,8 +2,8 @@
 
 Two independent audits were run against the implementation (tunnel correctness vs.
 reference panels; security of the admin API / anti-abuse design). This file tracks
-every finding and what was done about it. Test evidence: 92/92 automated tests
-(62 unit + 6 security regressions + 16 live HTTP E2E + 8 live WS tunnel E2E).
+every finding and what was done about it. Test evidence: 93/93 automated tests
+(62 unit + 7 security regressions + 16 live HTTP E2E + 8 live WS tunnel E2E).
 
 ## Fixed — tunnel correctness (`src/proxy/ws.ts` unless noted)
 
@@ -48,10 +48,11 @@ every finding and what was done about it. Test evidence: 92/92 automated tests
 | S18 | LOW | No `Referrer-Policy` (adminPath/subPath leak via Referer) | `no-referrer` on every HTML response |
 | S19 | LOW | `subPath` interpolated raw into `innerHTML` (stored XSS if KV hand-edited) | wrapped in `esc()` (`panel.html`) |
 | S20 | LOW | Default admin path 32 bits of entropy | `randomHex(12)` (96 bits) |
+| S21 | MED | Password change did not invalidate existing sessions | `sessionEpoch` in settings, keyed session records, new cookie issued to the caller; `/password` also rate-limited |
 
 ## Deferred (documented, not yet implemented)
 
-- **Session epoch on password change** (stolen session survives credential rotation, ≤12h). Requires versioning `s:` keys + settings write; planned as `s:<epoch>:<token>`.
+- ~~Session epoch on password change~~ — **fixed**: sessions are keyed `s:<epoch>:<token>`; `PUT /password` bumps `settings.sessionEpoch`, orphaning every older session, and hands the caller a fresh one (regression-tested).
 - **Content-Security-Policy** on the admin HTML: the panel relies on inline scripts, so a useful CSP needs nonces and a browser QA pass first.
 - **Cookie-only API auth** (drop `x-session`/localStorage): panel currently authenticates via header; rework touches the whole UI session flow.
 - **Per-isolate limits are soft** by design (login 10/min, upgrades, 60/min sub, guard windows): effective limits multiply with isolate count. Documented; a Durable Object would make them global.

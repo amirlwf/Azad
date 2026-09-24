@@ -247,6 +247,7 @@ export async function handleAdminApi(ctx: AdminRequest): Promise<Response> {
     // adminPassHash is not a user-editable field: accepting it would let a
     // session holder reset the password (or fall back to first-run setup)
     delete (body as Record<string, unknown>).adminPassHash;
+    delete (body as Record<string, unknown>).sessionEpoch; // server-managed
     const next = validateSettings(ctx.settings, body);
     if ('error' in next) return fail((next as { error: string }).error);
     await saveSettings(env, next as Settings);
@@ -258,6 +259,9 @@ export async function handleAdminApi(ctx: AdminRequest): Promise<Response> {
   }
 
   if (path === 'password' && method === 'PUT') {
+    // credential change: same brute-force shield as login
+    const pwip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+    if (!loginLimiter.hit(`pw:${pwip}`, Date.now())) return fail('too many attempts, try again later', 429);
     let body: { current?: string; next?: string };
     try {
       body = (await request.json()) as { current?: string; next?: string };
@@ -269,10 +273,15 @@ export async function handleAdminApi(ctx: AdminRequest): Promise<Response> {
     }
     if (!body.next || body.next.length < 8) return fail('password too short (min 8)');
     const hash = await hashPassword(body.next);
-    const next = { ...ctx.settings, adminPassHash: hash };
+    // bump the epoch: every session issued before this moment becomes invalid
+    const next = { ...ctx.settings, adminPassHash: hash, sessionEpoch: (ctx.settings.sessionEpoch || 0) + 1 };
     await saveSettings(env, next);
     resetSettingsCache();
-    return json({ ok: true });
+    await pushLog(env, 'auth', 'admin password changed');
+    // keep the caller logged in with a fresh session on the new epoch
+    const token = await createSession(env);
+    const secure = url.protocol === 'https:';
+    return json({ ok: true, token }, 200, { 'set-cookie': sessionCookie(token, secure) });
   }
 
   if (path === 'rotate' && method === 'POST') {

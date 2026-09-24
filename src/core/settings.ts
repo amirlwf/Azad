@@ -16,6 +16,8 @@ export interface Settings {
   wsPath: string;
   /** pbkdf2 hash, format: pbkdf2$<saltHex>$<hashHex>; empty => first-run setup */
   adminPassHash: string;
+  /** bumped on password change: orphan every session issued before it */
+  sessionEpoch: number;
   /** protocol selection: a = vless-only, b = trojan-only, both = a+b */
   mode: 'a' | 'b' | 'both';
   /** ports advertised in generated client configs */
@@ -57,6 +59,7 @@ export function defaultSettings(env: { BRAND?: string; LOCAL_TEST?: string } = {
     subPath: dev ? 'get-dev' : `get-${randomHex(4)}`,
     wsPath: dev ? '/devws1234567890' : `/${randomHex(12)}`,
     adminPassHash: '',
+    sessionEpoch: 0,
     mode: 'both',
     tlsPorts: [443],
     httpPorts: [80, 8080, 8880, 2052, 2053, 2082, 2083, 2086, 2087, 2095, 2096],

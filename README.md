@@ -55,5 +55,5 @@ npx wrangler dev --port 8787 --var LOCAL_TEST:1
 
 ## Test status
 
-92/92 (62 unit + 6 security-regression + 16 live HTTP E2E + 8 live WS tunnel E2E),
+93/93 (62 unit + 7 security-regression + 16 live HTTP E2E + 8 live WS tunnel E2E),
 `tsc --noEmit` clean, signature scan clean. Audit details: `docs/AUDIT.md`.

@@ -1,5 +1,6 @@
 import { randomHex } from './codecs.ts';
-import { getKV, readJSON, writeJSON, type Env, type KVLike } from './store.ts';
+import { getKV, readJSON, writeJSON, type Env } from './store.ts';
+import { settingsFor } from './settings.ts';
 
 /**
  * Admin authentication: PBKDF2-SHA256 password hash (WebCrypto only, no
@@ -61,12 +62,16 @@ interface Session {
   exp: number;
 }
 
-const sessKey = (t: string) => `s:${t}`;
+const sessKey = (t: string, epoch: number) => `s:${epoch}:${t}`;
+
+async function epoch(env: Env): Promise<number> {
+  return (await settingsFor(env)).sessionEpoch || 0;
+}
 
 export async function createSession(env: Env): Promise<string> {
   const token = randomHex(24);
   const kv = getKV(env);
-  await writeJSON(kv, sessKey(token), { exp: Date.now() + SESSION_TTL * 1000 } satisfies Session, {
+  await writeJSON(kv, sessKey(token, await epoch(env)), { exp: Date.now() + SESSION_TTL * 1000 } satisfies Session, {
     expirationTtl: SESSION_TTL,
   });
   return token;
@@ -74,17 +79,18 @@ export async function createSession(env: Env): Promise<string> {
 
 export async function validSession(env: Env, token: string | null): Promise<boolean> {
   if (!token || !/^[0-9a-f]{48}$/.test(token)) return false;
-  const sess = await readJSON<Session>(getKV(env), sessKey(token));
+  // keyed by the current epoch: a password change orphans every old session
+  const sess = await readJSON<Session>(getKV(env), sessKey(token, await epoch(env)));
   if (!sess) return false;
   if (sess.exp <= Date.now()) {
-    await getKV(env).delete(sessKey(token));
+    await getKV(env).delete(sessKey(token, await epoch(env)));
     return false;
   }
   return true;
 }
 
 export async function destroySession(env: Env, token: string | null): Promise<void> {
-  if (token) await getKV(env).delete(sessKey(token));
+  if (token) await getKV(env).delete(sessKey(token, await epoch(env)));
 }
 
 export function parseCookie(header: string | null, name: string): string | null {
@@ -109,4 +115,4 @@ export async function ensureAdmin(env: Env, storedHash: string): Promise<string>
   return '';
 }
 
-export type { KVLike };
+export type { KVLike } from './store.ts';

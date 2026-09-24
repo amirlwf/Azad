@@ -337,3 +337,27 @@ describe('security regressions (audit)', () => {
     assert.equal(r.body.user.maxConns, null);
   });
 });
+
+
+describe('password change invalidates sessions', () => {
+  it('kills every session issued before the change', async () => {
+    const r = await call('/setup', { method: 'POST', body: JSON.stringify({ password: 'correct horse battery' }) });
+    const oldCookie = r.cookie;
+    const before = await call('/users', { cookie: oldCookie });
+    assert.equal(before.status, 200, 'sanity: setup cookie works');
+
+    const ch = await call('/password', {
+      method: 'PUT',
+      cookie: oldCookie,
+      body: JSON.stringify({ current: 'correct horse battery', next: 'completely new secret' }),
+    });
+    assert.equal(ch.status, 200);
+    assert.ok(ch.cookie, 'caller must receive a fresh session');
+
+    const after = await call('/users', { cookie: oldCookie });
+    assert.equal(after.status, 401, 'session issued before the change must be dead');
+
+    const fresh = await call('/users', { cookie: ch.cookie });
+    assert.equal(fresh.status, 200, 'the new-epoch session must work');
+  });
+});
