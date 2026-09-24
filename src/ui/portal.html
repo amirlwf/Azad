@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>__BRAND__</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{--bg:#0b1020;--panel:#121a30;--line:#26314f;--txt:#e9edf7;--muted:#93a0be;
+        --brand:#5b8cff;--brand2:#7c6cff;--ok:#31c48d;--warn:#f5a524;--bad:#ef5b6b;--r:14px}
+  html[data-theme=light]{--bg:#f4f6fc;--panel:#fff;--line:#e3e8f5;--txt:#131a2b;--muted:#657193}
+  body{margin:0;min-height:100dvh;color:var(--txt);font:15px/1.6 -apple-system,"Segoe UI",Tahoma,"Noto Sans Arabic",system-ui,sans-serif;
+       background:radial-gradient(1100px 650px at 90% -10%,#1b2a55 0%,var(--bg) 55%) no-repeat,var(--bg)}
+  .wrap{max-width:820px;margin:0 auto;padding:26px 16px 60px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:18px}
+  .brand{display:flex;gap:10px;align-items:center;font-weight:800;font-size:19px}
+  .logo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+        background:linear-gradient(135deg,var(--brand),var(--brand2))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+  h1{font-size:19px;margin:0 0 6px}
+  h2{font-size:15px;margin:0 0 10px}
+  .muted{color:var(--muted);font-size:13px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .k{font-size:12px;color:var(--muted)}.v{font-size:19px;font-weight:800;margin-top:3px}
+  .bar{height:9px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button,a.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);
+       color:var(--txt);border-radius:10px;padding:8px 12px;font-weight:700;font-size:13.5px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+  button.primary,.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent;color:#fff}
+  .link{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--muted);
+        background:color-mix(in srgb,var(--line) 45%,transparent);border-radius:8px;padding:7px 9px;
+        word-break:break-all;display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+  .link b{color:var(--txt);font-weight:700;flex-shrink:0}
+  .pill{display:inline-flex;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .pill.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .pill.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+  .pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+  #qr{display:none;place-items:center;gap:10px}
+  #qr.on{display:grid}
+  #qr canvas{background:#fff;padding:10px;border-radius:12px}
+  .toast{position:fixed;inset-block-end:16px;inset-inline-start:50%;transform:translateX(-50%);
+         background:var(--panel);border:1px solid var(--line);padding:10px 16px;border-radius:12px;display:none;z-index:40}
+  .toast.on{display:block}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .tabs button.on{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="logo">◆</div><span>__BRAND__</span></div>
+    <div class="row">
+      <button id="lang">EN</button>
+      <button id="theme">◐</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h1 id="u-name"></h1>
+        <div class="muted" id="u-sub"></div>
+      </div>
+      <span class="pill ok" id="u-state"></span>
+    </div>
+  </div>
+
+  <div class="cards" style="margin-bottom:14px">
+    <div class="card" style="margin:0"><div class="k" id="l-usage">مصرف</div><div class="v" id="v-usage">—</div><div class="bar"><i id="usage-bar" style="width:0%"></i></div></div>
+    <div class="card" style="margin:0"><div class="k" id="l-exp">انقضا</div><div class="v" id="v-exp">—</div></div>
+    <div class="card" style="margin:0"><div class="k" id="l-nodes">گره‌ها</div><div class="v" id="v-nodes">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-sub" style="margin:0">لینک اشتراک</h2>
+      <div class="row">
+        <button class="primary" id="copy-sub" data-t-copy>کپی لینک</button>
+        <button id="qr-btn">QR</button>
+      </div>
+    </div>
+    <div class="link" style="margin-top:10px"><b></b><span id="sub-url"></span></div>
+    <div class="row" style="margin-top:10px">
+      <a class="btn" id="dl-raw" href="?format=raw">RAW</a>
+      <a class="btn" id="dl-b64" href="?format=base64">Base64</a>
+      <a class="btn" id="dl-clash" href="?format=clash">Clash.Meta</a>
+      <a class="btn" id="dl-sb" href="?format=singbox">sing-box</a>
+    </div>
+    <div id="qr" style="margin-top:14px"><canvas id="qr-canvas"></canvas><div class="muted">__SUBURL__</div></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-nodes" style="margin:0">گره‌ها</h2>
+      <div class="row">
+        <button id="copy-all" data-t-copyall>کپی همه</button>
+      </div>
+    </div>
+    <div class="tabs" id="fmt-tabs">
+      <button data-fmt="all" class="on">همه</button>
+      <button data-fmt="a">A</button>
+      <button data-fmt="b">B</button>
+      <button data-fmt="tls">TLS</button>
+      <button data-fmt="plain">HTTP</button>
+    </div>
+    <div id="nodes" style="display:grid;gap:7px;margin-top:6px"></div>
+  </div>
+
+  <div class="muted" style="text-align:center" id="foot"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!--QR_LIB-->
+<script>
+const DATA = __SUBDATA__;
+const PA = atob('dmxlc3M=');   // protocol marker A (decoded at runtime)
+const PB = atob('dHJvamFu');   // protocol marker B
+let lang = localStorage.getItem('azad_lang') || 'fa';
+let fmt = 'all';
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+
+const TR = {
+  usage:['مصرف','Usage'], exp:['انقضا','Expiry'], nodes:['گره‌ها','Nodes'],
+  sub:['لینک اشتراک','Subscription link'], nodeh:['گره‌ها','Nodes'],
+  copy:['کپی لینک','Copy link'], copyall:['کپی همه','Copy all'],
+  all:['همه','All'], tls:['TLS','TLS'], plain:['HTTP','HTTP'],
+  unlimited:['نامحدود','Unlimited'], never:['هرگز','Never'],
+  active:['فعال','Active'], off:['غیرفعال','Disabled'],
+  copied:['کپی شد','Copied'], relink:['دریافت مجدد','Refresh']
+};
+const t = (k) => TR[k] ? TR[k][lang==='fa'?0:1] : k;
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  $('#lang').textContent = lang === 'fa' ? 'EN' : 'فا';
+  $('#l-usage').textContent = t('usage');
+  $('#l-exp').textContent = t('exp');
+  $('#l-nodes').textContent = t('nodes');
+  $('#h-sub').textContent = t('sub');
+  $('#h-nodes').textContent = t('nodeh');
+  $('#copy-sub').textContent = t('copy');
+  $('#copy-all').textContent = t('copyall');
+  const tabs = $$('#fmt-tabs button');
+  tabs.forEach(b => {
+    const f = b.dataset.fmt;
+    b.textContent = f === 'all' ? t('all') : f === 'tls' ? t('tls') : f === 'plain' ? t('plain') : f.toUpperCase();
+  });
+  renderMeta(); renderNodes();
+}
+
+function fmtBytes(n){
+  if (!n) return '0 B';
+  const u = ['B','KB','MB','GB','TB']; let i = 0;
+  while (n >= 1024 && i < u.length-1){ n /= 1024; i++; }
+  return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+}
+
+function renderMeta(){
+  $('#u-name').textContent = DATA.name || '—';
+  $('#u-sub').textContent = location.host + location.pathname;
+  $('#sub-url').textContent = location.href.split('?')[0];
+  const used = (DATA.usedUp || 0) + (DATA.usedDown || 0);
+  const pct = DATA.limitBytes > 0 ? Math.min(100, used / DATA.limitBytes * 100) : 0;
+  $('#v-usage').textContent = DATA.limitBytes > 0
+    ? `${fmtBytes(used)} / ${fmtBytes(DATA.limitBytes)}`
+    : `${fmtBytes(used)} · ${t('unlimited')}`;
+  $('#usage-bar').style.width = pct + '%';
+  $('#v-exp').textContent = DATA.expires ? new Date(DATA.expires).toLocaleDateString(lang==='fa'?'fa-IR':'en-GB') : t('never');
+  $('#v-nodes').textContent = (DATA.links || []).length;
+  const st = $('#u-state');
+  const active = DATA.state === true;
+  st.textContent = active ? t('active') : t('off');
+  st.className = 'pill ' + (active ? 'ok' : 'bad');
+  $('#foot').textContent = (DATA.brand || '') + ' · ' + location.host;
+}
+
+function parseLink(link){
+  try {
+    const u = new URL(link);
+    const proto = u.protocol.replace(':','');
+    const sec = u.searchParams.get('security') || 'none';
+    return { proto, tls: sec === 'tls', port: u.port || (sec === 'tls' ? '443' : '80') };
+  } catch { return { proto:'?', tls:false, port:'' }; }
+}
+
+let visible = [];
+function renderNodes(){
+  const box = $('#nodes');
+  const links = (DATA.links || []).filter(l => {
+    const p = parseLink(l);
+    if (fmt === 'all') return true;
+    if (fmt === 'a') return p.proto === PA;
+    if (fmt === 'b') return p.proto === PB;
+    if (fmt === 'tls') return p.tls;
+    if (fmt === 'plain') return !p.tls;
+    return true;
+  });
+  visible = links;
+  box.innerHTML = links.map((l, i) => {
+    const p = parseLink(l);
+    const label = `${p.proto.toUpperCase()} · ${p.port}${p.tls ? ' 🔒' : ''}`;
+    return `<div class="link"><b>${label}</b><span>${escapeHtml(l)}</span>
+      <button class="primary" style="padding:3px 8px;font-size:11.5px" data-copy="${i}">⧉</button></div>`;
+  }).join('') || '<div class="muted">—</div>';
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg){ const el = $('#toast'); el.textContent = msg; el.className = 'toast on';
+  setTimeout(() => el.className = 'toast', 2200); }
+
+function copy(text){ navigator.clipboard?.writeText(text).then(() => toast(t('copied'))); }
+
+$('#nodes').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  copy(visible[Number(b.dataset.copy)] || '');
+});
+$('#copy-sub').addEventListener('click', () => copy(location.href.split('?')[0]));
+$('#copy-all').addEventListener('click', () => copy((DATA.links || []).join('\n')));
+$('#fmt-tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  fmt = b.dataset.fmt;
+  $$('#fmt-tabs button').forEach(x => x.classList.toggle('on', x === b));
+  renderNodes();
+});
+
+$('#lang').addEventListener('click', () => {
+  lang = lang === 'fa' ? 'en' : 'fa';
+  localStorage.setItem('azad_lang', lang);
+  applyLang();
+});
+document.documentElement.dataset.theme = localStorage.getItem('azad_theme') || 'dark';
+$('#theme').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('azad_theme', next);
+});
+
+$('#qr-btn').addEventListener('click', async () => {
+  const box = $('#qr');
+  if (box.classList.contains('on')){ box.classList.remove('on'); return; }
+  box.classList.add('on');
+  if (box.dataset.done) return;
+  try {
+    const qr = window.qrcode;
+    if (!qr) throw new Error('qr unavailable');
+    const url = location.href.split('?')[0];
+    const q = qr(0, 'M');
+    q.addData(url);
+    q.make();
+    const size = Math.min(260, window.innerWidth - 80);
+    const n = q.getModuleCount();
+    const cell = Math.floor(size / n);
+    const canvas = $('#qr-canvas');
+    canvas.width = canvas.height = cell * n;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++)
+        if (q.isDark(r, c)) ctx.fillRect(c * cell, r * cell, cell, cell);
+    box.dataset.done = '1';
+  } catch (err) { toast(String(err)); }
+});
+
+applyLang();
+</script>
+</body>
+</html>

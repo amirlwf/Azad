@@ -1,0 +1,14 @@
+name = "azad-gw"
+main = "dist/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# Local/dev namespace. Replace id after the first `wrangler deploy` if you
+# deploy to an account (wrangler prints the new namespace id).
+[[kv_namespaces]]
+binding = "KV"
+id = "00000000000000000000000000000000"
+
+[vars]
+# Panel brand shown in the admin UI / portal (user facing, harmless).
+BRAND = "Azad"

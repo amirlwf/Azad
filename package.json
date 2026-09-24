@@ -1,0 +1,27 @@
+{
+  "name": "azad-panel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "High-performance edge tunnel panel with a clean admin UI",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.ts",
+    "dev": "node scripts/build.js && wrangler dev --local dist/worker.js",
+    "deploy": "node scripts/build.js && wrangler deploy dist/worker.js"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260924.1",
+    "esbuild": "^0.28.2",
+    "terser": "^5.51.2",
+    "qrcode-generator": "^1.4.4",
+    "typescript": "~5.9.0",
+    "wrangler": "^4.138.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20260921.1": true
+  }
+}

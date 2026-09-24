@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>__BRAND__ — Console</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#0b1020; --panel:#121a30; --panel2:#18223c; --line:#26314f;
+    --txt:#e9edf7; --muted:#93a0be; --brand:#5b8cff; --brand2:#7c6cff;
+    --ok:#31c48d; --warn:#f5a524; --bad:#ef5b6b;
+    --radius:14px; --shadow:0 18px 40px -20px rgba(0,0,0,.75);
+  }
+  html[data-theme=light]{
+    --bg:#f4f6fc; --panel:#ffffff; --panel2:#f7f9ff; --line:#e3e8f5;
+    --txt:#131a2b; --muted:#657193;
+  }
+  html[data-theme=light]{--muted:#657193}
+  body{
+    margin:0;background:radial-gradient(1200px 700px at 85% -10%,#1b2a55 0%,var(--bg) 55%) no-repeat,var(--bg);
+    color:var(--txt);font:15px/1.6 -apple-system,"Segoe UI",Tahoma,"Noto Sans Arabic",system-ui,sans-serif;
+    min-height:100dvh
+  }
+  .shell{display:grid;grid-template-columns:250px 1fr;min-height:100dvh}
+  aside{
+    background:color-mix(in srgb,var(--panel) 88%,transparent);
+    border-inline-end:1px solid var(--line);padding:18px 14px;position:sticky;top:0;height:100dvh;overflow:auto
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;margin-bottom:22px}
+  .logo{
+    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:17px;
+    background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:var(--shadow)
+  }
+  nav{display:grid;gap:4px}
+  nav button{
+    all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+    color:var(--muted);font-weight:600;font-size:14px;transition:.15s
+  }
+  nav button:hover{background:var(--panel2);color:var(--txt)}
+  nav button.on{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 26%,transparent),transparent);color:var(--txt)}
+  .side-foot{margin-top:22px;display:grid;gap:8px;font-size:12px;color:var(--muted)}
+  .side-foot code{word-break:break-all;background:var(--panel2);padding:6px;border-radius:8px;font-size:11px}
+  main{padding:22px;max-width:1250px;width:100%}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  h1{font-size:22px;margin:0}
+  h2{font-size:16px;margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+  .card .k{font-size:12px;color:var(--muted)}
+  .card .v{font-size:22px;font-weight:800;margin-top:4px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:start;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  tbody tr:hover{background:var(--panel2)}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .pill.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+  .pill.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+  button,input,select,textarea{
+    font:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:8px 11px
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:1px}
+  .btn{cursor:pointer;font-weight:700}
+  .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent;color:#fff}
+  .btn.danger{background:color-mix(in srgb,var(--bad) 20%,transparent);border-color:color-mix(in srgb,var(--bad) 40%,transparent);color:var(--bad)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:5px 9px;font-size:12.5px;border-radius:8px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  label{display:grid;gap:5px;font-size:12.5px;color:var(--muted);font-weight:600}
+  label span.hint{font-weight:400;opacity:.8}
+  .switch{display:flex;align-items:center;gap:8px}
+  .switch input{width:18px;height:18px;accent-color:var(--brand)}
+  .view{display:none}
+  .view.on{display:block}
+  .toast{
+    position:fixed;inset-block-end:18px;inset-inline-end:18px;background:var(--panel);border:1px solid var(--line);
+    padding:11px 15px;border-radius:12px;box-shadow:var(--shadow);z-index:50;max-width:340px;display:none
+  }
+  .toast.on{display:block}
+  .toast.err{border-color:var(--bad);color:var(--bad)}
+  .empty{padding:26px;text-align:center;color:var(--muted)}
+  .qr{display:grid;place-items:center;gap:8px}
+  .qr canvas{background:#fff;padding:10px;border-radius:12px}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .login{min-height:100dvh;display:grid;place-items:center;padding:20px}
+  .login .box{width:min(380px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:var(--shadow)}
+  .login h1{font-size:20px;margin-bottom:4px}
+  .login form{display:grid;gap:12px;margin-top:18px}
+  .hidden{display:none!important}
+  .langs{display:flex;gap:6px}
+  .langs button{padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer}
+  .langs button.on{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-color:transparent}
+  .warnbox{border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:color-mix(in srgb,var(--warn) 10%,transparent);padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  .sub-line{font-size:12px;color:var(--muted);word-break:break-all}
+  .modal{position:fixed;inset:0;background:rgba(4,8,18,.62);display:grid;place-items:center;z-index:60;padding:16px}
+  .mbox{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+  .mbox h2{margin:0 0 14px}
+  .mbox .grid2{margin-bottom:6px}
+  .mbox .row{justify-content:flex-end;margin-top:14px}
+  .uuidrow{display:flex;gap:6px}
+  .uuidrow input{flex:1}
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:static;height:auto;border-inline-end:none;border-bottom:1px solid var(--line)}
+    nav{grid-template-columns:repeat(3,1fr)}
+    main{padding:16px}
+  }
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="box">
+    <div class="row" style="justify-content:space-between">
+      <div class="row">
+        <div class="logo">◆</div>
+        <div>
+          <h1 data-fa="ورود به کنسول" data-en="Console login">ورود به کنسول</h1>
+          <div class="muted" style="font-size:12px">__BRAND__</div>
+        </div>
+      </div>
+      <div class="langs">
+        <button type="button" class="on" data-lang="fa">فا</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+    <form id="login-form">
+      <div id="login-hint" class="muted" style="font-size:12px;display:none"></div>
+      <label><span data-fa="رمز عبور" data-en="Password">رمز عبور</span>
+        <input id="pw" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn primary" type="submit" data-fa="ورود" data-en="Sign in">ورود</button>
+      <div class="muted" id="login-err" style="font-size:12px;color:var(--bad)"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app" class="shell hidden">
+  <aside>
+    <div class="brand"><div class="logo">◆</div><span>__BRAND__</span></div>
+    <nav id="nav">
+      <button data-view="overview" class="on"><span>📊</span><span data-fa="داشبورد" data-en="Dashboard">داشبورد</span></button>
+      <button data-view="users"><span>👥</span><span data-fa="کاربران" data-en="Users">کاربران</span></button>
+      <button data-view="settings"><span>⚙️</span><span data-fa="تنظیمات" data-en="Settings">تنظیمات</span></button>
+      <button data-view="guard"><span>🛡️</span><span data-fa="ایمنی" data-en="Safety">ایمنی</span></button>
+      <button data-view="logs"><span>🧾</span><span data-fa="رویدادها" data-en="Events">رویدادها</span></button>
+    </nav>
+    <div class="side-foot">
+      <div data-fa="لینک پنل" data-en="Panel path">لینک پنل</div>
+      <code id="panel-url"></code>
+      <div class="row" style="margin-top:6px">
+        <button class="btn sm ghost" id="copy-panel" data-fa="کپی" data-en="Copy">کپی</button>
+        <button class="btn sm ghost" id="theme-toggle">◐</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div>
+        <h1 id="view-title" data-fa="داشبورد" data-en="Dashboard">داشبورد</h1>
+        <div class="muted" style="font-size:12.5px" id="view-sub" data-fa="وضعیت لحظه‌ای سرویس" data-en="Live service status">وضعیت لحظه‌ای سرویس</div>
+      </div>
+      <div class="row">
+        <button class="btn ghost sm" id="refresh">↻ <span data-fa="تازه‌سازی" data-en="Refresh">تازه‌سازی</span></button>
+        <button class="btn ghost sm" id="logout" data-fa="خروج" data-en="Sign out">خروج</button>
+      </div>
+    </header>
+
+    <section class="view on" id="view-overview">
+      <div class="cards" id="stat-cards"></div>
+      <div class="panel">
+        <h2 data-fa="میان‌برها" data-en="Quick actions">میان‌برها</h2>
+        <div class="row">
+          <button class="btn primary" id="quick-user" data-fa="کاربر جدید" data-en="New user">کاربر جدید</button>
+          <button class="btn" id="quick-diag" data-fa="تست خروجی" data-en="Egress test">تست خروجی</button>
+          <button class="btn" id="quick-rotate" data-fa="تعویض مسیر تونل" data-en="Rotate tunnel path">تعویض مسیر تونل</button>
+        </div>
+        <div id="diag-out" class="mono" style="margin-top:10px;white-space:pre-wrap;display:none"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-users">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0" data-fa="کاربران" data-en="Users">کاربران</h2>
+          <div class="row">
+            <input id="user-search" placeholder="…" style="min-width:180px">
+            <select id="user-filter">
+              <option value="all" data-fa="همه" data-en="All">همه</option>
+              <option value="active" data-fa="فعال" data-en="Active">فعال</option>
+              <option value="disabled" data-fa="غیرفعال" data-en="Disabled">غیرفعال</option>
+              <option value="expired" data-en="Expired">منقضی</option>
+              <option value="over-quota" data-fa="سقف مصرف" data-en="Over quota">سقف مصرف</option>
+            </select>
+            <button class="btn primary" id="add-user" data-fa="افزودن" data-en="Add">افزودن</button>
+          </div>
+        </div>
+        <div style="overflow:auto;margin-top:12px">
+          <table>
+            <thead><tr>
+              <th data-fa="نام" data-en="Name">نام</th>
+              <th data-fa="وضعیت" data-en="Status">وضعیت</th>
+              <th data-fa="ترافیک" data-en="Traffic">ترافیک</th>
+              <th data-fa="انقضا" data-en="Expiry">انقضا</th>
+              <th data-fa="اشتراک" data-en="Subscription">اشتراک</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="panel">
+        <h2 data-fa="هویت پنل" data-en="Panel identity">هویت پنل</h2>
+        <div class="grid2">
+          <label><span data-fa="نام برند" data-en="Brand">نام برند</span><input id="s-brand"></label>
+          <label><span data-fa="مسیر پنل" data-en="Panel path">مسیر پنل</span><input id="s-adminPath" class="mono"></label>
+          <label><span data-fa="مسیر اشتراک" data-en="Subscription path">مسیر اشتراک</span><input id="s-subPath" class="mono"></label>
+          <label><span data-fa="مسیر تونل" data-en="Tunnel path">مسیر تونل</span><input id="s-wsPath" class="mono"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-fa="شبکه" data-en="Network">شبکه</h2>
+        <div class="grid2">
+          <label><span data-fa="پورت‌های TLS" data-en="TLS ports">پورت‌های TLS</span><input id="s-tlsPorts" placeholder="443"></label>
+          <label><span data-fa="پورت‌های HTTP" data-en="HTTP ports">پورت‌های HTTP</span><input id="s-httpPorts" placeholder="80,8080"></label>
+          <label><span data-fa="میزبان ثابت" data-en="Fixed host">میزبان ثابت</span><input id="s-host" placeholder="(auto)"></label>
+          <label><span data-fa="اثر انگشت TLS" data-en="TLS fingerprint">اثر انگشت TLS</span>
+            <select id="s-fingerprint">
+              <option value="chrome">chrome</option><option value="firefox">firefox</option>
+              <option value="safari">safari</option><option value="edge">edge</option><option value="ios">ios</option>
+            </select></label>
+          <label><span data-fa="داده زودهنگام" data-en="Early data">داده زودهنگام</span><input id="s-earlyData" type="number" min="0" max="8192"></label>
+          <label><span data-fa="پروتکل" data-en="Protocol">پروتکل</span>
+            <select id="s-mode">
+              <option value="both" data-fa="هردو" data-en="Both">هردو</option>
+              <option value="a" data-en="Mode A">A</option>
+              <option value="b" data-en="Mode B">B</option>
+            </select></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-fa="پایداری" data-en="Resilience">پایداری</h2>
+        <div class="grid2">
+          <label><span data-fa="آدرس‌های جایگزین" data-en="Fallback proxies">آدرس‌های جایگزین</span>
+            <textarea id="s-proxyIPs" rows="3" placeholder="1.2.3.4:443&#10;host:443"></textarea>
+            <span class="hint" data-fa="وقتی اتصال مستقیم بی‌پاسخ بماند" data-en="Used when direct egress returns no data">وقتی اتصال مستقیم بی‌پاسخ بماند</span></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-fa="محدودیت‌ها" data-en="Limits">محدودیت‌ها</h2>
+        <div class="grid2">
+          <label><span data-fa="حد اتصال همزمان" data-en="Connections per user">حد اتصال همزمان</span><input id="s-maxConns" type="number" min="1" max="100"></label>
+          <label><span data-fa="اتصال جدید در دقیقه" data-en="New upgrades / minute">اتصال جدید در دقیقه</span><input id="s-maxUpgrades" type="number" min="1" max="600"></label>
+          <label><span data-fa="پورت‌های مجاز مقصد" data-en="Allowed destination ports">پورت‌های مجاز مقصد</span><input id="s-egressPorts" placeholder="80,443,8443"></label>
+          <label><span data-fa="سایت پوشش" data-en="Camouflage origin">سایت پوشش</span><input id="s-camoUrl" placeholder="https://example.org"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label class="switch"><input type="checkbox" id="s-portal"><span data-fa="صفحه اشتراک کاربر" data-en="User subscription page">صفحه اشتراک کاربر</span></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-fa="رمز عبور" data-en="Password">رمز عبور</h2>
+        <div class="grid2">
+          <label><span data-fa="رمز فعلی" data-en="Current password">رمز فعلی</span><input id="p-current" type="password"></label>
+          <label><span data-fa="رمز جدید" data-en="New password">رمز جدید</span><input id="p-next" type="password"></label>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="p-save" data-fa="تغییر رمز" data-en="Change password">تغییر رمز</button></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="s-save" data-fa="ذخیره تنظیمات" data-en="Save settings">ذخیره تنظیمات</button>
+        <span class="muted" id="s-status" style="font-size:12.5px"></span>
+      </div>
+    </section>
+
+    <section class="view" id="view-guard">
+      <div class="warnbox" data-fa="این بخش دلیل اصلی «بن‌نشدن» سرویس است: مقصدهای داخلی و متادیتاای شبکه بسته می‌شوند، پورت‌های غیرمجاز مسدود و نرخ اتصال محدود می‌گردد." data-en="This section is the core of the anti-abuse design: internal and metadata destinations are blocked, non-allowed ports are refused and handshake rate is limited.">
+        این بخش دلیل اصلی «بن‌نشدن» سرویس است: مقصدهای داخلی و متادیتاای شبکه بسته می‌شوند، پورت‌های غیرمجاز مسدود و نرخ اتصال محدود می‌گردد.
+      </div>
+      <div class="cards" id="guard-cards"></div>
+      <div class="panel">
+        <h2 data-fa="تست خروجی" data-en="Egress test">تست خروجی</h2>
+        <button class="btn primary" id="guard-diag" data-fa="اجرای تست" data-en="Run test">اجرای تست</button>
+        <div id="guard-out" class="mono" style="margin-top:10px;white-space:pre-wrap;display:none"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-logs">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0" data-fa="رویدادهای اخیر" data-en="Recent events">رویدادهای اخیر</h2>
+          <button class="btn sm ghost" id="logs-refresh">↻</button>
+        </div>
+        <div style="overflow:auto;margin-top:10px">
+          <table><thead><tr>
+            <th data-fa="زمان" data-en="Time">زمان</th><th data-fa="نوع" data-en="Type">نوع</th><th data-fa="شرح" data-en="Detail">شرح</th>
+          </tr></thead><tbody id="logs-body"></tbody></table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal hidden" id="um">
+  <div class="mbox">
+    <h2 id="um-title" data-fa="کاربر جدید" data-en="New user">کاربر جدید</h2>
+    <div class="grid2">
+      <label><span data-fa="نام" data-en="Name">نام</span><input id="um-name" maxlength="64"></label>
+      <label><span data-fa="UUID (خالی = خودکار)" data-en="UUID (empty = auto)">UUID (خالی = خودکار)</span>
+        <span class="uuidrow"><input id="um-uuid" class="mono" placeholder="auto"><button class="btn sm" id="um-gen" type="button">⟳</button></span></label>
+      <label><span data-fa="سقف مصرف (GB، 0 = نامحدود)" data-en="Traffic limit (GB, 0 = unlimited)">سقف مصرف (GB، 0 = نامحدود)</span>
+        <input id="um-limit" type="number" min="0" step="1" value="0"></label>
+      <label><span data-fa="انقضا (روز، 0 = هرگز)" data-en="Expiry (days, 0 = never)">انقضا (روز، 0 = هرگز)</span>
+        <input id="um-days" type="number" min="0" step="1" value="0"></label>
+      <label><span data-fa="حد اتصال همزمان (0 = پیش‌فرض)" data-en="Concurrent connections (0 = default)">حد اتصال همزمان (0 = پیش‌فرض)</span>
+        <input id="um-conns" type="number" min="0" max="100" value="0"></label>
+      <label><span data-fa="یادداشت" data-en="Note">یادداشت</span><input id="um-note" maxlength="200"></label>
+    </div>
+    <label class="switch" style="margin-top:8px"><input type="checkbox" id="um-enabled" checked>
+      <span data-fa="فعال" data-en="Enabled">فعال</span></label>
+    <div class="row">
+      <button class="btn ghost" id="um-cancel" type="button" data-fa="انصراف" data-en="Cancel">انصراف</button>
+      <button class="btn primary" id="um-save" type="button" data-fa="ذخیره" data-en="Save">ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="import-file" accept=".json" class="hidden">
+<script>
+const T = {
+  login:'ورود به کنسول', password:'رمز عبور', signin:'ورود', dash:'داشبورد', users:'کاربران',
+  settings:'تنظیمات', safety:'ایمنی', events:'رویدادها', live:'وضعیت لحظه‌ای سرویس', refresh:'تازه‌سازی',
+  signout:'خروج', quick:'میان‌برها', newuser:'کاربر جدید', egtest:'تست خروجی', rotpath:'تعویض مسیر تونل',
+  name:'نام', status:'وضعیت', traffic:'ترافیک', expiry:'انقضا', sub:'اشتراک', all:'همه', active:'فعال',
+  disabled:'غیرفعال', expired:'منقضی', overquota:'سقف مصرف', add:'افزودن', copy:'کپی', panelp:'لینک پنل',
+  identity:'هویت پنل', brand:'نام برند', panelpath:'مسیر پنل', subpath:'مسیر اشتراک', tunpath:'مسیر تونل',
+  network:'شبکه', tlsports:'پورت‌های TLS', httpports:'پورت‌های HTTP', host:'میزبان ثابت', fp:'اثر انگشت TLS',
+  ed:'داده زودهنگام', proto:'پروتکل', both:'هردو', resilience:'پایداری', fallbacks:'آدرس‌های جایگزین',
+  fbhint:'وقتی اتصال مستقیم بی‌پاسخ بماند', limits:'محدودیت‌ها', conns:'حد اتصال همزمان', upgrades:'اتصال جدید در دقیقه',
+  egress:'پورت‌های مجاز مقصد', camo:'سایت پوشش', portal:'صفحه اشتراک کاربر', pw:'رمز عبور', curpw:'رمز فعلی',
+  newpw:'رمز جدید', chpw:'تغییر رمز', save:'ذخیره تنظیمات', saved:'ذخیره شد', time:'زمان', type:'نوع', detail:'شرح',
+  recent:'رویدادهای اخیر', noguards:'سرویس در حالت امن اجرا می‌شود', ok:'سالم', unlimited:'نامحدود', run:'اجرای تست',
+  del:'حذف', rotateq:'مسیر تونل تغییر کند؟'
+};
+let lang = localStorage.getItem('azad_lang') || 'fa';
+let token = localStorage.getItem('azad_token') || '';
+let state = { users: [], settings: null, stats: null, logs: [] };
+let currentView = 'overview';
+let editing = null;
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const t = (k) => (lang === 'fa' ? (T[k] || k) : k);
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  document.title = `${state.settings?.brand || '__BRAND__'} — ${t('dash')}`;
+  $$('[data-fa]').forEach(el => { el.textContent = el.dataset[lang] || el.textContent; });
+  $$('.langs button').forEach(b => b.classList.toggle('on', b.dataset.lang === lang));
+  $('#view-title').textContent = t(currentView === 'users' ? 'users' : currentView === 'settings' ? 'settings' : currentView === 'guard' ? 'safety' : currentView === 'logs' ? 'events' : 'dash');
+  $('#view-sub').textContent = t('live');
+  renderAll();
+}
+
+function toast(msg, isErr){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.className = 'toast on' + (isErr ? ' err' : '');
+  setTimeout(() => el.className = 'toast', 3200);
+}
+
+function fmtBytes(n){
+  if (!n) return '0 B';
+  const u = ['B','KB','MB','GB','TB']; let i = 0;
+  while (n >= 1024 && i < u.length-1){ n /= 1024; i++; }
+  return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+}
+function fmtDate(ms){
+  if (!ms) return '∞';
+  return new Date(ms).toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-GB', { dateStyle:'short', timeStyle:'short' });
+}
+
+const API = () => location.pathname.replace(/\/$/, '') + '/api';
+
+async function call(path, opts = {}){
+  const headers = { 'content-type': 'application/json', ...(opts.headers || {}) };
+  if (token) headers['x-session'] = token;
+  const res = await fetch(API() + path, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const text = await res.text();
+  let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, error:text.slice(0,120) }; }
+  if (res.status === 401){ token=''; localStorage.removeItem('azad_token'); showLogin(); throw new Error('unauthorized'); }
+  if (!res.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function showLogin(){
+  $('#app').classList.add('hidden');
+  $('#login').classList.remove('hidden');
+}
+function showApp(){
+  $('#login').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+}
+
+async function boot(){
+  if (!token) { showLogin(); return; }
+  try {
+    const s = await call('/settings');
+    state.settings = s.settings;
+    showApp();
+    await refreshAll();
+  } catch { showLogin(); }
+}
+
+let setupRequired = false;
+async function probeSession(){
+  try {
+    const d = await call('/session');
+    setupRequired = !!d.setupRequired;
+    $('#login-hint').textContent = setupRequired
+      ? (lang === 'fa' ? 'اولین راه‌اندازی — رمز عبور مدیر را تعیین کنید' : 'First run — set the admin password')
+      : '';
+    $('#login-hint').style.display = setupRequired ? 'block' : 'none';
+  } catch {}
+}
+
+$('#login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('#login-err').textContent = '';
+  try {
+    const r = await fetch(API() + (setupRequired ? '/setup' : '/login'), {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ password: $('#pw').value })
+    });
+    const d = await r.json();
+    if (!r.ok || d.ok === false) throw new Error(d.error || 'invalid');
+    token = d.token;
+    localStorage.setItem('azad_token', token);
+    $('#pw').value = '';
+    const s = await call('/settings');
+    state.settings = s.settings;
+    showApp();
+    await refreshAll();
+  } catch (err) { $('#login-err').textContent = err.message; }
+});
+
+$('#logout').addEventListener('click', async () => {
+  try { await call('/logout', { method:'POST' }); } catch {}
+  token=''; localStorage.removeItem('azad_token'); showLogin();
+});
+
+$('#theme-toggle').addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = cur;
+  localStorage.setItem('azad_theme', cur);
+});
+document.documentElement.dataset.theme = localStorage.getItem('azad_theme') || 'dark';
+
+$$('.langs button').forEach(b => b.addEventListener('click', () => {
+  lang = b.dataset.lang; localStorage.setItem('azad_lang', lang); applyLang();
+}));
+
+$$('#nav button').forEach(b => b.addEventListener('click', () => {
+  currentView = b.dataset.view;
+  $$('#nav button').forEach(x => x.classList.toggle('on', x === b));
+  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'view-' + currentView));
+  applyLang();
+  if (currentView === 'logs') loadLogs();
+}));
+
+$('#refresh').addEventListener('click', () => refreshAll());
+$('#logs-refresh').addEventListener('click', () => loadLogs());
+$('#copy-panel').addEventListener('click', () => { navigator.clipboard?.writeText(location.href); toast(t('copy')); });
+
+function renderAll(){
+  renderStats(); renderUsers(); renderSettings(); renderGuard(); renderPanelUrl();
+}
+
+function renderPanelUrl(){
+  const u = new URL(location.href);
+  u.search = '';
+  $('#panel-url').textContent = u.toString();
+}
+
+async function refreshAll(){
+  try {
+    const [ov, us, st] = await Promise.all([call('/overview'), call('/users'), call('/settings')]);
+    state.stats = ov.stats; state.users = us.users; state.settings = st.settings;
+    renderAll();
+  } catch (err) { toast(err.message, true); }
+}
+
+function renderStats(){
+  const s = state.stats || {};
+  const cards = [
+    [t('users'), s.total || 0],
+    [t('active'), s.active || 0],
+    [t('disabled'), s.disabled || 0],
+    [t('expired'), s.expired || 0],
+    [t('traffic'), fmtBytes((s.usedUp || 0) + (s.usedDown || 0))],
+    [t('live') + ' • WS', s.online || 0],
+  ];
+  $('#stat-cards').innerHTML = cards.map(([k,v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+
+function userStatus(u){
+  const now = Date.now();
+  if (!u.enabled) return { k:'disabled', cls:'bad' };
+  if (u.expires && u.expires <= now) return { k:'expired', cls:'warn' };
+  if (u.limitBytes > 0 && u.usedUp + u.usedDown >= u.limitBytes) return { k:'overquota', cls:'bad' };
+  return { k:'active', cls:'ok' };
+}
+
+function renderUsers(){
+  const q = ($('#user-search').value || '').toLowerCase();
+  const f = $('#user-filter').value;
+  const list = state.users.filter(u => {
+    if (q && !u.name.toLowerCase().includes(q) && !u.uuid.toLowerCase().includes(q)) return false;
+    if (f === 'all') return true;
+    return userStatus(u).k === f;
+  });
+  const body = $('#users-body');
+  if (!list.length){ body.innerHTML = `<tr><td colspan="6" class="empty">—</td></tr>`; return; }
+  body.innerHTML = list.map(u => {
+    const st = userStatus(u);
+    const used = u.usedUp + u.usedDown;
+    const pct = u.limitBytes > 0 ? Math.min(100, Math.round(used / u.limitBytes * 100)) : null;
+    const sub = `${location.origin}/${state.settings.subPath}/${u.token}`;
+    return `<tr>
+      <td><b>${esc(u.name)}</b><div class="sub-line mono">${u.uuid.slice(0,8)}…</div></td>
+      <td><span class="pill ${st.cls}">${t(st.k)}</span></td>
+      <td>${fmtBytes(used)}${u.limitBytes ? ` <span class="muted">/ ${fmtBytes(u.limitBytes)}</span>${pct>=100?' ⚠':''}` : ' <span class="muted">('+t('unlimited')+')</span>'}</td>
+      <td>${fmtDate(u.expires)}</td>
+      <td><div class="sub-line mono" style="max-width:190px;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</div></td>
+      <td class="row">
+        <button class="btn sm" data-act="copy-sub" data-id="${u.id}" title="copy">⧉</button>
+        <button class="btn sm" data-act="edit" data-id="${u.id}">✎</button>
+        <button class="btn sm ghost" data-act="toggle" data-id="${u.id}">${u.enabled ? '⏸' : '▶'}</button>
+        <button class="btn sm danger" data-act="del" data-id="${u.id}">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+$('#users-body').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const id = btn.dataset.id; const act = btn.dataset.act;
+  const u = state.users.find(x => x.id === id); if (!u) return;
+  try {
+    if (act === 'copy-sub'){ navigator.clipboard?.writeText(`${location.origin}/${state.settings.subPath}/${u.token}`); toast(t('copy')); }
+    else if (act === 'edit'){ openEditor(u); }
+    else if (act === 'toggle'){ await call('/users/' + id, { method:'PATCH', body:{ enabled:!u.enabled } }); await refreshAll(); }
+    else if (act === 'del'){ if (confirm(t('del'))){ await call('/users/' + id, { method:'DELETE' }); await refreshAll(); } }
+  } catch (err) { toast(err.message, true); }
+});
+
+$('#user-search').addEventListener('input', renderUsers);
+$('#user-filter').addEventListener('change', renderUsers);
+
+/* user editor modal */
+function randUUID(){
+  const b = new Uint8Array(16); crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map(x => x.toString(16).padStart(2,'0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+function openEditor(u){
+  editing = u ? u.id : null;
+  $('#um-title').textContent = u ? (lang==='fa' ? 'ویرایش کاربر' : 'Edit user') : t('newuser');
+  $('#um-name').value = u ? u.name : '';
+  $('#um-uuid').value = u ? u.uuid : '';
+  $('#um-limit').value = u && u.limitBytes ? Math.round(u.limitBytes / 1073741824) : 0;
+  $('#um-days').value = u && u.expires ? Math.max(0, Math.ceil((u.expires - Date.now()) / 86400000)) : 0;
+  $('#um-conns').value = u && u.maxConns ? u.maxConns : 0;
+  $('#um-note').value = u ? (u.note || '') : '';
+  $('#um-enabled').checked = u ? !!u.enabled : true;
+  $('#um').classList.remove('hidden');
+  $('#um-name').focus();
+}
+function closeEditor(){ $('#um').classList.add('hidden'); editing = null; }
+
+$('#um-gen').addEventListener('click', () => { $('#um-uuid').value = randUUID(); });
+$('#um-cancel').addEventListener('click', closeEditor);
+$('#um').addEventListener('click', (e) => { if (e.target.id === 'um') closeEditor(); });
+$('#um-save').addEventListener('click', async () => {
+  const name = $('#um-name').value.trim();
+  if (!name){ toast(lang==='fa' ? 'نام را وارد کنید' : 'Name required', true); return; }
+  const days = Number($('#um-days').value || 0);
+  const body = {
+    name,
+    uuid: $('#um-uuid').value.trim() || undefined,
+    limitBytes: Math.max(0, Number($('#um-limit').value || 0)) * 1073741824,
+    expires: days > 0 ? Date.now() + days * 86400000 : 0,
+    maxConns: Number($('#um-conns').value || 0),
+    note: $('#um-note').value,
+    enabled: $('#um-enabled').checked,
+  };
+  try {
+    if (editing) await call('/users/' + editing, { method:'PUT', body });
+    else await call('/users', { method:'POST', body });
+    closeEditor();
+    await refreshAll();
+    toast(t('saved'));
+  } catch (err) { toast(err.message, true); }
+});
+
+$('#add-user').addEventListener('click', () => openEditor(null));
+$('#quick-user').addEventListener('click', () => { switchView('users'); openEditor(null); });
+
+function switchView(v){
+  currentView = v;
+  $$('#nav button').forEach(x => x.classList.toggle('on', x.dataset.view === v));
+  $$('.view').forEach(x => x.classList.toggle('on', x.id === 'view-' + v));
+  applyLang();
+}
+
+function renderSettings(){
+  const s = state.settings; if (!s) return;
+  $('#s-brand').value = s.brand;
+  $('#s-adminPath').value = s.adminPath;
+  $('#s-subPath').value = s.subPath;
+  $('#s-wsPath').value = s.wsPath;
+  $('#s-tlsPorts').value = s.tlsPorts.join(',');
+  $('#s-httpPorts').value = s.httpPorts.join(',');
+  $('#s-host').value = s.host || '';
+  $('#s-fingerprint').value = s.fingerprint;
+  $('#s-earlyData').value = s.earlyData;
+  $('#s-mode').value = s.mode;
+  $('#s-proxyIPs').value = s.proxyIPs.join('\n');
+  $('#s-maxConns').value = s.maxConnsPerUser;
+  $('#s-maxUpgrades').value = s.maxUpgradesPerMinute;
+  $('#s-egressPorts').value = s.egressPorts.join(',');
+  $('#s-camoUrl').value = s.camoUrl || '';
+  $('#s-portal').checked = !!s.portalEnabled;
+}
+
+$('#s-save').addEventListener('click', async () => {
+  const nums = (id) => ($(id).value || '').split(/[,\s]+/).filter(Boolean).map(Number).filter(n => Number.isFinite(n));
+  const body = {
+    brand: $('#s-brand').value.trim(),
+    adminPath: $('#s-adminPath').value.trim(),
+    subPath: $('#s-subPath').value.trim(),
+    wsPath: $('#s-wsPath').value.trim(),
+    tlsPorts: nums('#s-tlsPorts'),
+    httpPorts: nums('#s-httpPorts'),
+    host: $('#s-host').value.trim(),
+    fingerprint: $('#s-fingerprint').value,
+    earlyData: Number($('#s-earlyData').value || 0),
+    mode: $('#s-mode').value,
+    proxyIPs: ($('#s-proxyIPs').value || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean),
+    maxConnsPerUser: Number($('#s-maxConns').value || 8),
+    maxUpgradesPerMinute: Number($('#s-maxUpgrades').value || 30),
+    egressPorts: nums('#s-egressPorts'),
+    camoUrl: $('#s-camoUrl').value.trim(),
+    portalEnabled: $('#s-portal').checked,
+  };
+  try {
+    const r = await call('/settings', { method:'PUT', body });
+    state.settings = r.settings;
+    $('#s-status').textContent = t('saved');
+    setTimeout(() => $('#s-status').textContent = '', 2500);
+    renderPanelUrl();
+  } catch (err) { toast(err.message, true); }
+});
+
+$('#p-save').addEventListener('click', async () => {
+  try {
+    await call('/password', { method:'PUT', body:{ current:$('#p-current').value, next:$('#p-next').value } });
+    $('#p-current').value=''; $('#p-next').value='';
+    toast(t('saved'));
+  } catch (err) { toast(err.message, true); }
+});
+
+async function runDiag(outSel){
+  const out = $(outSel); out.style.display='block'; out.textContent='…';
+  try {
+    const r = await call('/diagnose');
+    out.textContent = JSON.stringify(r.report, null, 2);
+  } catch (err) { out.textContent = err.message; }
+}
+$('#quick-diag').addEventListener('click', () => runDiag('#diag-out'));
+$('#guard-diag').addEventListener('click', () => runDiag('#guard-out'));
+
+$('#quick-rotate').addEventListener('click', async () => {
+  if (!confirm(t('rotateq'))) return;
+  try { const r = await call('/rotate', { method:'POST' }); state.settings = r.settings; renderAll(); toast(t('saved')); }
+  catch (err) { toast(err.message, true); }
+});
+
+function renderGuard(){
+  const s = state.settings; if (!s) return;
+  const cards = [
+    [t('safety'), s.allowPrivateDest ? '⚠ open' : '✓'],
+    ['pkt / s', '∞'],
+    [t('upgrades'), s.maxUpgradesPerMinute],
+    [t('conns'), s.maxConnsPerUser],
+    [t('egress'), s.egressPorts.length],
+    [t('fallbacks'), s.proxyIPs.length],
+  ];
+  $('#guard-cards').innerHTML = cards.map(([k,v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+
+async function loadLogs(){
+  try {
+    const r = await call('/logs');
+    state.logs = r.logs || [];
+    $('#logs-body').innerHTML = state.logs.slice().reverse().map(l => {
+      const cls = l.k === 'guard' ? 'bad' : l.k === 'auth' ? 'warn' : l.k === 'tunnel' ? 'ok' : '';
+      return `<tr><td class="mono">${fmtDate(l.t)}</td><td><span class="pill ${cls}">${l.k}</span></td><td>${esc(l.m)}</td></tr>`;
+    }).join('') || `<tr><td colspan="3" class="empty">—</td></tr>`;
+  } catch (err) { toast(err.message, true); }
+}
+
+applyLang();
+probeSession();
+boot();
+</script>
+</body>
+</html>
