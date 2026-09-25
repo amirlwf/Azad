@@ -39,26 +39,19 @@ function tlsQuery(s: Settings, host: string, tls: boolean): string {
 }
 
 export function buildLinks(user: User, s: Settings, host: string): string[] {
+  // one source of truth with clash/sing-box: same nodes, same names
   const links: string[] = [];
-  let i = 0;
-  for (const ep of endpoints(s)) {
-    i++;
-    const path = encodeURIComponent(wsPath(s));
-    // same attribute order as the reference generators (security, type, host,
-    // path, tls block) so client-side parsing quirks never bite
+  for (const n of nodeSpecs(user, s, host)) {
     const base =
-      `${user.uuid}@${host}:${ep.port}` +
-      `?security=${ep.tls ? 'tls' : 'none'}&type=ws` +
-      `&host=${encodeURIComponent(host)}&path=${path}` +
-      tlsQuery(s, host, ep.tls);
-    if (s.mode !== 'b') {
+      `${n.userId}@${n.server}:${n.port}` +
+      `?security=${n.tls ? 'tls' : 'none'}&type=ws` +
+      `&host=${encodeURIComponent(n.host)}&path=${encodeURIComponent(n.path)}` +
+      tlsQuery(s, n.host, n.tls);
+    if (n.proto === 'a') {
       // VLESS URIs require the encryption attribute; trojan has none
-      links.push(
-        `${SCHEME_A}${base}&encryption=none#${encodeURIComponent(`${s.brand}-${ep.port}-${NAME_A}-${i}`)}`,
-      );
-    }
-    if (s.mode !== 'a') {
-      links.push(`${SCHEME_B}${base}#${encodeURIComponent(`${s.brand}-${ep.port}-${NAME_B}-${i}`)}`);
+      links.push(`${SCHEME_A}${base}&encryption=none#${encodeURIComponent(n.name)}`);
+    } else {
+      links.push(`${SCHEME_B}${base}#${encodeURIComponent(n.name)}`);
     }
   }
   return links;
@@ -78,6 +71,9 @@ function yamlQuote(value: string): string {
 interface NodeSpec {
   name: string;
   proto: 'a' | 'b';
+  /** address we CONNECT to: the domain, or a clean edge IP */
+  server: string;
+  /** SNI / Host header — always the real domain, even for clean IPs */
   host: string;
   port: number;
   tls: boolean;
@@ -90,33 +86,47 @@ interface NodeSpec {
 function nodeSpecs(user: User, s: Settings, host: string): NodeSpec[] {
   const specs: NodeSpec[] = [];
   let i = 0;
-  for (const ep of endpoints(s)) {
-    i++;
-    if (s.mode !== 'b') {
-      specs.push({
-        name: `${s.brand}-${ep.port}-${NAME_A}-${i}`,
-        proto: 'a',
-        host,
-        port: ep.port,
-        tls: ep.tls,
-        userId: user.uuid,
-        fingerprint: s.fingerprint,
-        path: wsPath(s),
-        earlyData: s.earlyData,
-      });
-    }
-    if (s.mode !== 'a') {
-      specs.push({
-        name: `${s.brand}-${ep.port}-${NAME_B}-${i}`,
-        proto: 'b',
-        host,
-        port: ep.port,
-        tls: ep.tls,
-        userId: user.uuid,
-        fingerprint: s.fingerprint,
-        path: wsPath(s),
-        earlyData: s.earlyData,
-      });
+  // the real domain first, then every clean edge IP: same SNI, different
+  // connect address — how the panel survives a poisoned/blocked subdomain
+  const targets = [
+    { server: host, clean: false },
+    ...s.cleanIps.map((ip) => ({ server: ip, clean: true })),
+  ];
+  const MAX_SPECS = 64; // keep subscriptions a sane size
+  outer: for (const t of targets) {
+    for (const ep of endpoints(s)) {
+      i++;
+      const tail = t.clean ? ` #${t.server}` : '';
+      if (s.mode !== 'b') {
+        specs.push({
+          name: `${NAME_A}-${ep.port}-${i}${tail}`,
+          proto: 'a',
+          server: t.server,
+          host,
+          port: ep.port,
+          tls: ep.tls,
+          userId: user.uuid,
+          fingerprint: s.fingerprint,
+          path: wsPath(s),
+          earlyData: s.earlyData,
+        });
+        if (specs.length >= MAX_SPECS) break outer;
+      }
+      if (s.mode !== 'a') {
+        specs.push({
+          name: `${NAME_B}-${ep.port}-${i}${tail}`,
+          proto: 'b',
+          server: t.server,
+          host,
+          port: ep.port,
+          tls: ep.tls,
+          userId: user.uuid,
+          fingerprint: s.fingerprint,
+          path: wsPath(s),
+          earlyData: s.earlyData,
+        });
+        if (specs.length >= MAX_SPECS) break outer;
+      }
     }
   }
   return specs;
@@ -145,7 +155,7 @@ export function toClash(user: User, s: Settings, host: string): string {
   for (const n of specs) {
     lines.push(`  - name: ${yamlQuote(n.name)}`);
     lines.push(`    type: ${n.proto === 'a' ? PROTO_A : PROTO_B}`);
-    lines.push(`    server: ${yamlQuote(n.host)}`);
+    lines.push(`    server: ${yamlQuote(n.server)}`);
     lines.push(`    port: ${n.port}`);
     lines.push(`    ${n.proto === 'a' ? 'uuid' : 'password'}: ${yamlQuote(n.userId)}`);
     lines.push('    network: ws');
@@ -200,7 +210,7 @@ export function toSingBox(user: User, s: Settings, host: string): string {
     const ob: Record<string, unknown> = {
       type: n.proto === 'a' ? PROTO_A : PROTO_B,
       tag: n.name,
-      server: n.host,
+      server: n.server,
       server_port: n.port,
       tcp_fast_open: false,
       domain_resolver: 'dns-direct',
@@ -273,6 +283,11 @@ export function toSingBox(user: User, s: Settings, host: string): string {
   return JSON.stringify(config, null, 2);
 }
 
+/** ASCII fallback for clients that ignore filename* (RFC 5987). */
+function asciiFilename(f: string): string {
+  return f.replace(/[^\w.-]+/g, '').replace(/^[.-]+/, '') || 'config';
+}
+
 export function subscriptionHeaders(
   user: User,
   s: Settings,
@@ -283,7 +298,7 @@ export function subscriptionHeaders(
     'content-type': contentType,
     'profile-title': `base64:${toBase64(s.brand)}`,
     'profile-update-interval': '6',
-    'content-disposition': `attachment; filename="${filename}"`,
+    'content-disposition': `attachment; filename="${asciiFilename(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
     'cache-control': 'no-store',
     'access-control-allow-origin': '*',
   };

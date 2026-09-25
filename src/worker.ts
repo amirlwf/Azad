@@ -1,4 +1,6 @@
 import { settingsFor, type Env } from './core/settings.ts';
+import { cspHeader, injectNonce, newNonce } from './http/csp.ts';
+import { FONT_B64 } from './generated/assets.ts';
 import { handleAdminApi, isAuthed } from './http/admin-api.ts';
 import { handleCamo } from './http/camo.ts';
 import { handleSubscription } from './http/subscription.ts';
@@ -18,13 +20,14 @@ import { handleTunnel } from './proxy/ws.ts';
  * version endpoint, no robots.txt with hints and no stack trace in errors.
  */
 
-function html(body: string): Response {
+function html(body: string, csp?: string): Response {
   return new Response(body, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'referrer-policy': 'no-referrer',
       'cache-control': 'no-store',
       'x-robots-tag': 'noindex, nofollow',
+      ...(csp ? { 'content-security-policy': csp } : {}),
     },
   });
 }
@@ -43,6 +46,20 @@ export default {
 
       if (path === '/favicon.ico') return new Response(null, { status: 204 });
 
+      if (path === '/f.woff2') {
+        // Vazirmatn variable font: base64 lives in the bundle, bytes are cached
+        if (!FONT_B64) return new Response('not found', { status: 404 });
+        const bin = atob(FONT_B64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new Response(bytes, {
+          headers: {
+            'content-type': 'font/woff2',
+            'cache-control': 'public, max-age=31536000, immutable',
+          },
+        });
+      }
+
       const adminBase = `/${settings.adminPath}`;
       if (path === adminBase || path.startsWith(`${adminBase}/`)) {
         if (path === `${adminBase}/api` || path.startsWith(`${adminBase}/api/`)) {
@@ -54,7 +71,12 @@ export default {
         if (request.method !== 'GET' && request.method !== 'HEAD') {
           return new Response('Method Not Allowed', { status: 405 });
         }
-        return html(PANEL_HTML.replaceAll('__BRAND__', () => escapeHtml(settings.brand)));
+        const nonce = newNonce();
+        const page = injectNonce(
+          PANEL_HTML.replaceAll('__BRAND__', () => escapeHtml(settings.brand)),
+          nonce,
+        );
+        return html(page, cspHeader(nonce));
       }
 
       if (path.startsWith(`/${settings.subPath}/`)) {

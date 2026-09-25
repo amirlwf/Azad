@@ -31,6 +31,8 @@ export interface Settings {
   fingerprint: string;
   /** fallback proxies used when a direct connect yields no data */
   proxyIPs: string[];
+  /** clean edge IPs: extra config addresses whose SNI stays the real host */
+  cleanIps: string[];
   /** allowed destination ports inside the tunnel (empty = unrestricted) */
   egressPorts: number[];
   /** dev/test only — must stay false in production */
@@ -56,7 +58,7 @@ export function defaultSettings(
   // tunnel. It is never set in production, where paths stay random.
   const dev = env.LOCAL_TEST === '1';
   return {
-    brand: env.BRAND || 'Azad',
+    brand: env.BRAND || 'داکسی',
     // ADMIN_PATH lets a dashboard-only deploy pin a known panel URL on first
     // boot (same bootstrap rule as ADMIN_PASSWORD): a saved KV value always
     // wins afterwards, and an invalid value falls back to the random path.
@@ -76,6 +78,7 @@ export function defaultSettings(
     earlyData: 2560,
     fingerprint: 'chrome',
     proxyIPs: [],
+    cleanIps: [],
     egressPorts: [...DEFAULT_EGRESS_PORTS],
     allowPrivateDest: false,
     // <= ISOLATE_BUDGET (5): Cloudflare caps an invocation at 6 outbound

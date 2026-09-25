@@ -53,8 +53,9 @@ export interface AdminRequest {
 }
 
 export async function isAuthed(env: Env, request: Request): Promise<boolean> {
-  const token =
-    request.headers.get('x-session') || parseCookie(request.headers.get('cookie'), SESSION_COOKIE);
+  // The HttpOnly cookie is the ONLY credential: the x-session header path is
+  // gone on purpose so a session token can never be lifted out of localStorage.
+  const token = parseCookie(request.headers.get('cookie'), SESSION_COOKIE);
   return validSession(env, token);
 }
 
@@ -106,7 +107,7 @@ export async function handleAdminApi(ctx: AdminRequest): Promise<Response> {
     await pushLog(env, 'auth', 'admin logged in');
     const secure = url.protocol === 'https:';
     return json(
-      { ok: true, token },
+      { ok: true },
       200,
       { 'set-cookie': sessionCookie(token, secure) },
     );
@@ -142,12 +143,11 @@ export async function handleAdminApi(ctx: AdminRequest): Promise<Response> {
     await pushLog(env, 'auth', 'initial admin password set');
     const token = await createSession(env);
     const secure = url.protocol === 'https:';
-    return json({ ok: true, token }, 201, { 'set-cookie': sessionCookie(token, secure) });
+    return json({ ok: true }, 201, { 'set-cookie': sessionCookie(token, secure) });
   }
 
   if (path === 'logout' && method === 'POST') {
-    const token =
-      request.headers.get('x-session') || parseCookie(request.headers.get('cookie'), SESSION_COOKIE);
+    const token = parseCookie(request.headers.get('cookie'), SESSION_COOKIE);
     await destroySession(env, token);
     return json({ ok: true }, 200, { 'set-cookie': clearCookie() });
   }
@@ -281,7 +281,7 @@ export async function handleAdminApi(ctx: AdminRequest): Promise<Response> {
     // keep the caller logged in with a fresh session on the new epoch
     const token = await createSession(env);
     const secure = url.protocol === 'https:';
-    return json({ ok: true, token }, 200, { 'set-cookie': sessionCookie(token, secure) });
+    return json({ ok: true }, 200, { 'set-cookie': sessionCookie(token, secure) });
   }
 
   if (path === 'rotate' && method === 'POST') {
@@ -419,6 +419,15 @@ export function validateSettings(base: Settings, patch: Partial<Settings>): Sett
   }
   for (const p of [...next.tlsPorts, ...next.httpPorts]) {
     if (!Number.isInteger(p) || p < 1 || p > 65535) return { error: 'invalid port' };
+  }
+  // clean IPs: literal addresses only, deduped, capped — SNI stays the host
+  next.cleanIps = [...new Set((next.cleanIps ?? []).map((x) => String(x).trim()).filter(Boolean))];
+  if (next.cleanIps.length > 12) return { error: 'too many clean IPs (max 12)' };
+  for (const ip of next.cleanIps) {
+    const v4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+    if (!(v4.test(ip) || (ip.includes(':') && /^[0-9a-fA-F:]{4,45}$/.test(ip)))) {
+      return { error: `invalid clean IP: ${ip}` };
+    }
   }
   if (!Array.isArray(next.proxyIPs) || next.proxyIPs.length > 20) return { error: 'too many proxy IPs' };
   for (const entry of next.proxyIPs) {

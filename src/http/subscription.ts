@@ -12,6 +12,7 @@ import { d } from '../core/codecs.ts';
 import { pushLog } from '../core/log.ts';
 import { PORTAL_HTML } from '../generated/assets.ts';
 import { RateLimiter } from '../core/guard.ts';
+import { cspHeader, injectNonce, newNonce } from './csp.ts';
 
 /**
  * Subscription endpoint: `/{subPath}/{token}`.
@@ -76,7 +77,7 @@ function formatFromUA(ua: string): string {
   return '';
 }
 
-function htmlResponse(html: string, status = 200): Response {
+function htmlResponse(html: string, status = 200, csp?: string): Response {
   return new Response(html, {
     status,
     headers: {
@@ -84,6 +85,7 @@ function htmlResponse(html: string, status = 200): Response {
       'referrer-policy': 'no-referrer',
       'cache-control': 'no-store',
       'x-robots-tag': 'noindex, nofollow',
+      ...(csp ? { 'content-security-policy': csp } : {}),
     },
   });
 }
@@ -140,11 +142,15 @@ export async function handleSubscription(
 
   if (wantsPage) {
     const payload = portalPayload(user, settings, host);
-    const html = PORTAL_HTML
-      .replaceAll('__BRAND__', () => escapeHtml(settings.brand))
-      .replace('__SUBDATA__', () => safeJSON(payload))
-      .replace('__SUBURL__', () => escapeHtml(url.pathname));
-    return htmlResponse(html);
+    const nonce = newNonce();
+    const html = injectNonce(
+      PORTAL_HTML
+        .replaceAll('__BRAND__', () => escapeHtml(settings.brand))
+        .replace('__SUBDATA__', () => safeJSON(payload))
+        .replace('__SUBURL__', () => escapeHtml(url.pathname)),
+      nonce,
+    );
+    return htmlResponse(html, 200, cspHeader(nonce));
   }
 
   if (state !== 'active') {
@@ -155,7 +161,7 @@ export async function handleSubscription(
   }
 
   const links = buildLinks(user, settings, host);
-  const name = settings.brand.replace(/[^\w.-]+/g, '') || 'config';
+  const name = settings.brand.trim() || 'config';
 
   if (format === 'clash' || format === 'meta') {
     return new Response(toClash(user, settings, host), {

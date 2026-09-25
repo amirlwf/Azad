@@ -1,5 +1,5 @@
 name = "azad-gw"
-main = "dist/worker.js"
+main = "_worker.js"
 compatibility_date = "2026-09-01"
 workers_dev = true
 

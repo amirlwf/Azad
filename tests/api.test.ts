@@ -286,6 +286,32 @@ describe('security regressions (audit)', () => {
     return r.cookie;
   }
 
+  it('x-session header is dead: the cookie is the only credential', async () => {
+    const c = await setup();
+    const sid = /azad_sid=([^;]+)/.exec(c)?.[1];
+    assert.ok(sid, 'session cookie must exist');
+    // a valid session token sent through the old header path must NOT auth
+    const byHeader = await call('/settings', { headers: { 'x-session': sid } });
+    assert.equal(byHeader.status, 401);
+    // the HttpOnly cookie keeps working
+    const byCookie = await call('/settings', { cookie: c });
+    assert.equal(byCookie.status, 200);
+  });
+
+  it('validates clean IPs (dedup + literal addresses only)', async () => {
+    const c = await setup();
+    const ok = await call('/settings', {
+      method: 'PUT', cookie: c,
+      body: JSON.stringify({ cleanIps: ['104.17.1.2', '172.64.32.7', '104.17.1.2'] }),
+    });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.deepEqual(ok.body.settings.cleanIps, ['104.17.1.2', '172.64.32.7']);
+    const bad = await call('/settings', {
+      method: 'PUT', cookie: c, body: JSON.stringify({ cleanIps: ['example.com'] }),
+    });
+    assert.equal(bad.status, 400);
+  });
+
   it('GET settings never exposes the password hash', async () => {
     const cookie = await setup();
     const r = await call('/settings', { cookie });
@@ -326,7 +352,7 @@ describe('security regressions (audit)', () => {
     });
     assert.equal(r.status, 403);
     const after = await call('/settings', { cookie });
-    assert.equal(after.body.settings.brand, 'Azad'); // unchanged
+    assert.equal(after.body.settings.brand, 'داکسی'); // unchanged
   });
 
   it('does not disclose the brand before login', async () => {

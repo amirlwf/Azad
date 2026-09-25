@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>__BRAND__ — Console</title>
-<style>
+<style nonce="__CSP_NONCE__">
+    @font-face{font-family:Vazirmatn;src:url('/f.woff2') format('woff2');font-weight:100 900;font-display:swap;}
   *,*::before,*::after{box-sizing:border-box}
   :root{
     --bg:#0b1020; --panel:#121a30; --panel2:#18223c; --line:#26314f;
@@ -20,7 +21,7 @@
   html[data-theme=light]{--muted:#657193}
   body{
     margin:0;background:radial-gradient(1200px 700px at 85% -10%,#1b2a55 0%,var(--bg) 55%) no-repeat,var(--bg);
-    color:var(--txt);font:15px/1.6 -apple-system,"Segoe UI",Tahoma,"Noto Sans Arabic",system-ui,sans-serif;
+    color:var(--txt);font:15px/1.6 Vazirmatn,-apple-system,"Segoe UI",Tahoma,"Noto Sans Arabic",system-ui,sans-serif;
     min-height:100dvh
   }
   .shell{display:grid;grid-template-columns:250px 1fr;min-height:100dvh}
@@ -221,7 +222,6 @@
       <div class="panel">
         <h2 data-fa="هویت پنل" data-en="Panel identity">هویت پنل</h2>
         <div class="grid2">
-          <label><span data-fa="نام برند" data-en="Brand">نام برند</span><input id="s-brand"></label>
           <label><span data-fa="مسیر پنل" data-en="Panel path">مسیر پنل</span><input id="s-adminPath" class="mono"></label>
           <label><span data-fa="مسیر اشتراک" data-en="Subscription path">مسیر اشتراک</span><input id="s-subPath" class="mono"></label>
           <label><span data-fa="مسیر تونل" data-en="Tunnel path">مسیر تونل</span><input id="s-wsPath" class="mono"></label>
@@ -251,7 +251,9 @@
         <h2 data-fa="پایداری" data-en="Resilience">پایداری</h2>
         <div class="grid2">
           <label><span data-fa="آدرس‌های جایگزین" data-en="Fallback proxies">آدرس‌های جایگزین</span>
-            <textarea id="s-proxyIPs" rows="3" placeholder="1.2.3.4:443&#10;host:443"></textarea>
+            <textarea id="s-proxyIPs" rows="3" placeholder="1.2.3.4:443&#10;host:443"></textarea></label>
+          <label><span data-fa="آیپی‌های تمیز (هر کدام در خط جدا)" data-en="Clean IPs (one per line)">آیپی‌های تمیز (هر کدام در خط جدا)</span>
+            <textarea id="s-cleanIps" rows="3" placeholder="104.17.1.2&#10;172.64.32.7"></textarea></label>
             <span class="hint" data-fa="وقتی اتصال مستقیم بی‌پاسخ بماند" data-en="Used when direct egress returns no data">وقتی اتصال مستقیم بی‌پاسخ بماند</span></label>
         </div>
       </div>
@@ -335,7 +337,7 @@
 
 <div class="toast" id="toast"></div>
 <input type="file" id="import-file" accept=".json" class="hidden">
-<script>
+<script nonce="__CSP_NONCE__">
 const T = {
   login:'ورود به کنسول', password:'رمز عبور', signin:'ورود', dash:'داشبورد', users:'کاربران',
   settings:'تنظیمات', safety:'ایمنی', events:'رویدادها', live:'وضعیت لحظه‌ای سرویس', refresh:'تازه‌سازی',
@@ -352,7 +354,6 @@ const T = {
   del:'حذف', rotateq:'مسیر تونل تغییر کند؟'
 };
 let lang = localStorage.getItem('azad_lang') || 'fa';
-let token = localStorage.getItem('azad_token') || '';
 let state = { users: [], settings: null, stats: null, logs: [] };
 let currentView = 'overview';
 let editing = null;
@@ -394,11 +395,10 @@ const API = () => location.pathname.replace(/\/$/, '') + '/api';
 
 async function call(path, opts = {}){
   const headers = { 'content-type': 'application/json', ...(opts.headers || {}) };
-  if (token) headers['x-session'] = token;
   const res = await fetch(API() + path, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const text = await res.text();
   let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, error:text.slice(0,120) }; }
-  if (res.status === 401){ token=''; localStorage.removeItem('azad_token'); showLogin(); throw new Error('unauthorized'); }
+  if (res.status === 401){ localStorage.removeItem('azad_token'); showLogin(); throw new Error('unauthorized'); }
   if (!res.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + res.status));
   return data;
 }
@@ -413,7 +413,6 @@ function showApp(){
 }
 
 async function boot(){
-  if (!token) { showLogin(); return; }
   try {
     const s = await call('/settings');
     state.settings = s.settings;
@@ -444,8 +443,6 @@ $('#login-form').addEventListener('submit', async (e) => {
     });
     const d = await r.json();
     if (!r.ok || d.ok === false) throw new Error(d.error || 'invalid');
-    token = d.token;
-    localStorage.setItem('azad_token', token);
     $('#pw').value = '';
     const s = await call('/settings');
     state.settings = s.settings;
@@ -456,7 +453,7 @@ $('#login-form').addEventListener('submit', async (e) => {
 
 $('#logout').addEventListener('click', async () => {
   try { await call('/logout', { method:'POST' }); } catch {}
-  token=''; localStorage.removeItem('azad_token'); showLogin();
+  localStorage.removeItem('azad_token'); showLogin();
 });
 
 $('#theme-toggle').addEventListener('click', () => {
@@ -628,7 +625,6 @@ function switchView(v){
 
 function renderSettings(){
   const s = state.settings; if (!s) return;
-  $('#s-brand').value = s.brand;
   $('#s-adminPath').value = s.adminPath;
   $('#s-subPath').value = s.subPath;
   $('#s-wsPath').value = s.wsPath;
@@ -639,6 +635,7 @@ function renderSettings(){
   $('#s-earlyData').value = s.earlyData;
   $('#s-mode').value = s.mode;
   $('#s-proxyIPs').value = s.proxyIPs.join('\n');
+  $('#s-cleanIps').value = (s.cleanIps || []).join('\n');
   $('#s-maxConns').value = s.maxConnsPerUser;
   $('#s-maxUpgrades').value = s.maxUpgradesPerMinute;
   $('#s-egressPorts').value = s.egressPorts.join(',');
@@ -649,7 +646,6 @@ function renderSettings(){
 $('#s-save').addEventListener('click', async () => {
   const nums = (id) => ($(id).value || '').split(/[,\s]+/).filter(Boolean).map(Number).filter(n => Number.isFinite(n));
   const body = {
-    brand: $('#s-brand').value.trim(),
     adminPath: $('#s-adminPath').value.trim(),
     subPath: $('#s-subPath').value.trim(),
     wsPath: $('#s-wsPath').value.trim(),
@@ -660,6 +656,7 @@ $('#s-save').addEventListener('click', async () => {
     earlyData: Number($('#s-earlyData').value || 0),
     mode: $('#s-mode').value,
     proxyIPs: ($('#s-proxyIPs').value || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean),
+    cleanIps: ($('#s-cleanIps').value || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean),
     maxConnsPerUser: Number($('#s-maxConns').value || 8),
     maxUpgradesPerMinute: Number($('#s-maxUpgrades').value || 30),
     egressPorts: nums('#s-egressPorts'),

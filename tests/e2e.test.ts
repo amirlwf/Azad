@@ -266,3 +266,52 @@ describe('e2e: subscription + portal', () => {
     assert.equal(r.headers.get('access-control-allow-origin'), '*');
   });
 });
+
+describe('CSP + subscription headers (live)', () => {
+  const skip = () => !live;
+
+  it('admin page ships a nonce CSP that matches its inline script', async () => {
+    if (skip()) return;
+    const r = await fetch(`${BASE}${ADMIN}`, {
+      headers: { 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) Chrome/126' },
+    });
+    assert.equal(r.status, 200);
+    const csp = r.headers.get('content-security-policy') ?? '';
+    const nonce = /script-src 'nonce-([^']+)'/.exec(csp)?.[1];
+    assert.ok(nonce, `missing script nonce in CSP: ${csp}`);
+    const body = await r.text();
+    assert.ok(body.includes(`nonce="${nonce}"`), 'panel script must carry the response nonce');
+    assert.ok(!body.includes('__CSP_NONCE__'), 'nonce placeholder must be replaced');
+  });
+
+  it('portal page ships the same nonce CSP', async () => {
+    if (skip()) return;
+    const r = await fetch(`${BASE}${SUB}/${token}`, {
+      headers: { 'user-agent': 'Mozilla/5.0 Chrome/126' },
+    });
+    assert.equal(r.status, 200);
+    const csp = r.headers.get('content-security-policy') ?? '';
+    const nonce = /script-src 'nonce-([^']+)'/.exec(csp)?.[1];
+    assert.ok(nonce, `missing portal nonce: ${csp}`);
+    const body = await r.text();
+    assert.ok(body.includes(`nonce="${nonce}"`));
+    assert.ok(!body.includes('__CSP_NONCE__'));
+  });
+
+  it('subscription files advertise a UTF-8 filename', async () => {
+    if (skip()) return;
+    const r = await fetch(`${BASE}${SUB}/${token}?format=clash`, {
+      headers: { 'user-agent': 'clash-verge/2.0' },
+    });
+    const cd = r.headers.get('content-disposition') ?? '';
+    assert.ok(cd.includes("filename*=UTF-8''"), `expected filename*, got: ${cd}`);
+  });
+
+  it('local camouflage page blocks all scripts', async () => {
+    if (skip()) return;
+    const r = await fetch(`${BASE}/`);
+    const csp = r.headers.get('content-security-policy') ?? '';
+    assert.ok(csp.includes("default-src 'none'"), `camo CSP: ${csp}`);
+    assert.ok(!csp.includes('script-src'), 'camo page must fall back to default-src for scripts');
+  });
+});

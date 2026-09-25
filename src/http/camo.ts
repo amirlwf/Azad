@@ -73,6 +73,8 @@ export async function handleCamo(request: Request, _env: Env, settings: Settings
       'referrer-policy': 'no-referrer',
       'cache-control': 'public, max-age=300',
       'x-robots-tag': 'noindex, nofollow',
+      'content-security-policy':
+        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'",
     },
   });
 }
