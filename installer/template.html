@@ -237,11 +237,11 @@ $('#deployBtn').onclick = async () => {
 
     // 1) workers.dev subdomain
     log('checking workers.dev subdomain…');
-    const sub = (await api('/workers/subdomain')).result || {};
+    const sub = (await api(A + '/workers/subdomain')).result || {};
     let subdomain = sub.subdomain;
     const want = ($('#subDomain').value || '').trim();
-    if (!subdomain && want) { await api('/workers/subdomain', 'PATCH', { subdomain: want }); subdomain = want; }
-    if (want && subdomain && want !== subdomain) { await api('/workers/subdomain', 'PATCH', { subdomain: want }); subdomain = want; }
+    if (!subdomain && want) { await api(A + '/workers/subdomain', 'PATCH', { subdomain: want }); subdomain = want; }
+    if (want && subdomain && want !== subdomain) { await api(A + '/workers/subdomain', 'PATCH', { subdomain: want }); subdomain = want; }
     if (!subdomain) throw new Error('workers.dev subdomain not set — fill step 2');
     state.subdomain = subdomain;
     log('workers.dev: ' + subdomain, 'ok');

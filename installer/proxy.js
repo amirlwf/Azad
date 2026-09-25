@@ -51,7 +51,7 @@ export default {
     }
 
     if (!ALLOWED.some((re) => re.test(path))) {
-      return new Response(JSON.stringify({ errors: [{ message: 'path not allowed by installer proxy' }] }),
+      return new Response(JSON.stringify({ errors: [{ message: 'path not allowed by installer proxy: ' + path }] }),
         { status: 403, headers: { 'content-type': 'application/json', ...CORS } });
     }
 
