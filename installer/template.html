@@ -265,9 +265,27 @@ $('#deployBtn').onclick = async () => {
     const up = await api(A + '/workers/scripts/' + encodeURIComponent(name), 'PUT', fd);
     log('worker deployed' + (up.result && up.result.id ? ': ' + up.result.id : ''), 'ok');
 
-    // 4) make sure workers.dev routing is on
-    try { await api(A + '/workers/scripts/' + encodeURIComponent(name) + '/settings', 'PUT', { workers_dev: true }); }
-    catch (e) { log('workers_dev setting skipped: ' + e.message, 'info'); }
+    // 4) confirm the upload really landed, then attach the script to
+    //    workers.dev — without this the URL answers CF's generic 404
+    log('verifying upload…');
+    try { await api(A + '/workers/scripts/' + encodeURIComponent(name)); }
+    catch (e) { throw new Error('upload verification failed: ' + e.message); }
+
+    log('enabling workers.dev…');
+    const sd = A + '/workers/scripts/' + encodeURIComponent(name) + '/subdomain';
+    let onSub = false;
+    try { const r = await api(sd); onSub = !!(r.result && r.result.value); } catch {}
+    if (!onSub) {
+      let flipped = false, lastErr = '';
+      for (const meth of ['PATCH', 'PUT']) {
+        try { await api(sd, meth, { value: true }); flipped = true; break; }
+        catch (e) { lastErr = String(e.message || e); }
+      }
+      if (flipped) { try { const r = await api(sd); onSub = !!(r.result && r.result.value); } catch { onSub = true; } }
+      else log('workers.dev toggle: ' + lastErr, 'err');
+    }
+    if (!onSub) throw new Error('worker uploaded but NOT reachable on workers.dev — Workers → ' + name + ' → Settings → enable workers.dev, then rerun');
+    log('workers.dev: enabled', 'ok');
 
     // 5) result
     const url = 'https://' + name + '.' + subdomain + '.workers.dev';

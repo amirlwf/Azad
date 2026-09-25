@@ -22,6 +22,7 @@ const ALLOWED = [
   /^\/client\/v4\/accounts\/[^/]+$/,
   /^\/client\/v4\/accounts\/[^/]+\/workers\/scripts\/[^/]+$/,
   /^\/client\/v4\/accounts\/[^/]+\/workers\/scripts\/[^/]+\/settings$/,
+  /^\/client\/v4\/accounts\/[^/]+\/workers\/scripts\/[^/]+\/subdomain$/,
   /^\/client\/v4\/accounts\/[^/]+\/workers\/subdomain$/,
   /^\/client\/v4\/accounts\/[^/]+\/workers\/services\/[^/]+\/environments\/production\/subdomain$/,
   /^\/client\/v4\/accounts\/[^/]+\/storage\/kv\/namespaces$/,
