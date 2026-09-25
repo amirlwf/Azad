@@ -267,9 +267,15 @@ $('#deployBtn').onclick = async () => {
 
     // 4) confirm the upload really landed, then attach the script to
     //    workers.dev — without this the URL answers CF's generic 404
+    //    NOTE: GET /workers/scripts/<name> answers multipart/form-data by
+    //    design (metadata + module parts), so verification reads the JSON
+    //    script-settings endpoint instead.
     log('verifying upload…');
-    try { await api(A + '/workers/scripts/' + encodeURIComponent(name)); }
-    catch (e) { throw new Error('upload verification failed: ' + e.message); }
+    try {
+      const st = await api(A + '/workers/scripts/' + encodeURIComponent(name) + '/settings');
+      if (!st.success) throw new Error('settings endpoint says script missing');
+    } catch (e) { throw new Error('upload verification failed: ' + e.message); }
+    log('script exists on Cloudflare', 'ok');
 
     log('enabling workers.dev…');
     const sd = A + '/workers/scripts/' + encodeURIComponent(name) + '/subdomain';
