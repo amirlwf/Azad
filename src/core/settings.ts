@@ -48,14 +48,23 @@ export interface Settings {
   portalEnabled: boolean;
 }
 
-export function defaultSettings(env: { BRAND?: string; LOCAL_TEST?: string } = {}): Settings {
+export function defaultSettings(
+  env: { BRAND?: string; LOCAL_TEST?: string; ADMIN_PATH?: string } = {},
+): Settings {
   // LOCAL_TEST is a wrangler-dev switch only (--var LOCAL_TEST:1): it makes the
   // random paths deterministic so the e2e suite can find the panel and the
   // tunnel. It is never set in production, where paths stay random.
   const dev = env.LOCAL_TEST === '1';
   return {
     brand: env.BRAND || 'Azad',
-    adminPath: dev ? 'console-dev' : `console-${randomHex(4)}`,
+    // ADMIN_PATH lets a dashboard-only deploy pin a known panel URL on first
+    // boot (same bootstrap rule as ADMIN_PASSWORD): a saved KV value always
+    // wins afterwards, and an invalid value falls back to the random path.
+    adminPath: dev
+      ? 'console-dev'
+      : env.ADMIN_PATH && /^[0-9a-zA-Z_-]{4,64}$/.test(env.ADMIN_PATH)
+        ? env.ADMIN_PATH
+        : `console-${randomHex(4)}`,
     subPath: dev ? 'get-dev' : `get-${randomHex(4)}`,
     wsPath: dev ? '/devws1234567890' : `/${randomHex(12)}`,
     adminPassHash: '',

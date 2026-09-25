@@ -50,8 +50,14 @@ npx wrangler dev --port 8787 --var LOCAL_TEST:1
 
 1. `node scripts/build.js`
 2. Create a KV namespace, put its id into `wrangler.toml`
-3. `npx wrangler deploy`
-4. Open the admin path shown in the panel settings (random per instance)
+3. (Recommended) uncomment `ADMIN_PATH` under `[vars]` so you know the panel URL
+4. `npx wrangler deploy`
+5. Open `https://<project>.workers.dev/<ADMIN_PATH>` and set the admin password
+
+Dashboard-only upload (no CLI): create the Worker with a safe manual name,
+paste `dist/worker.js` into Edit code, add a KV binding named exactly `KV`,
+then the `ADMIN_PATH` / `ADMIN_PASSWORD` / `BRAND` variables — the Persian
+README walks through every click.
 
 Deploy on **Workers**, not Pages, and pick a project name free of proxy keywords
 (`edgetunnel`, `edtunnel`, `bpb`, `vless`, `trojan` …). The Persian README has the
@@ -60,5 +66,5 @@ and the recovery steps.
 
 ## Test status
 
-102/102 (68 unit incl. config parity + 7 security-regression + 19 live HTTP E2E + 8 live WS tunnel E2E),
+103/103 (69 unit incl. config parity + 7 security-regression + 19 live HTTP E2E + 8 live WS tunnel E2E),
 `tsc --noEmit` clean, signature scan clean. Audit details: `docs/AUDIT.md`.

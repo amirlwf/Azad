@@ -266,6 +266,16 @@ describe('default settings', () => {
     assert.equal(s.adminPassHash, '');
     assert.ok(s.mode === 'a' || s.mode === 'b' || s.mode === 'both');
   });
+
+  it('honours ADMIN_PATH for dashboard-only deploys', () => {
+    const s = defaultSettings({ ADMIN_PATH: 'my-panel-1' });
+    assert.equal(s.adminPath, 'my-panel-1', 'env ADMIN_PATH must seed the panel path');
+    // an invalid value falls back to the random path (same rule as the API validator)
+    const bad = defaultSettings({ ADMIN_PATH: 'bad path/../x' });
+    assert.ok(/^console-[0-9a-f]+$/.test(bad.adminPath), `unexpected fallback: ${bad.adminPath}`);
+    // the wrangler-dev switch still wins over everything
+    assert.equal(defaultSettings({ ADMIN_PATH: 'my-panel-1', LOCAL_TEST: '1' }).adminPath, 'console-dev');
+  });
 });
 
 

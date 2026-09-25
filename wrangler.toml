@@ -12,3 +12,7 @@ id = "00000000000000000000000000000000"
 [vars]
 # Panel brand shown in the admin UI / portal (user facing, harmless).
 BRAND = "Azad"
+# Optional: pin a known admin-panel path on FIRST boot (e.g. "my-console-7x").
+# Without it a random "console-xxxx" path is generated once and stored in KV.
+# After the first boot the path saved in KV wins — change it from the panel.
+# ADMIN_PATH = "my-console-7x"

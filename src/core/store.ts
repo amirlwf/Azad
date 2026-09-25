@@ -26,6 +26,8 @@ export type Env = {
   KV?: KVLike;
   BRAND?: string;
   ADMIN_PASSWORD?: string;
+  /** optional fixed admin path, settable as a dashboard Variable on first boot */
+  ADMIN_PATH?: string;
   /** wrangler-dev only: relax loopback + deterministic paths (see settings.ts) */
   LOCAL_TEST?: string;
 };
