@@ -2,7 +2,7 @@
  * Pure-JS SHA-224.
  *
  * WebCrypto (the only crypto available inside workerd) does not implement
- * SHA-224, and the Trojan password check needs sha224(password) as raw bytes.
+ * SHA-224, and the Protob password check needs sha224(password) as raw bytes.
  * Standard FIPS 180-4 implementation; tests compare it against node:crypto.
  */
 

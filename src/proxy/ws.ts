@@ -5,8 +5,8 @@ import { egressAllowed } from '../core/settings.ts';
 import { pushLog } from '../core/log.ts';
 import { settingsFor, type Env, type Settings } from '../core/settings.ts';
 import { addUsage, listUsers, userState, type User } from '../core/users.ts';
-import { parseVlessHeader, vlessResponseHeader, encodeVlessUdpPacket } from './vless.ts';
-import { parseTrojanHeader, trojanPasswordHex } from './trojan.ts';
+import { parseProtoaHeader, protoaResponseHeader, encodeProtoaUdpPacket } from './protoa.ts';
+import { parseProtobHeader, protobPasswordHex } from './protob.ts';
 
 /**
  * The tunnel: WebSocket upgrade -> protocol handshake -> guarded TCP egress.
@@ -182,7 +182,7 @@ export async function handleTunnel(request: Request, env: Env): Promise<Response
       byUUIDHex.set(u.uuid.replace(/-/g, '').toLowerCase(), u);
     }
     if (settings.mode !== 'a') {
-      const hex = trojanPasswordHex(u.uuid);
+      const hex = protobPasswordHex(u.uuid);
       passwordSet.add(hex);
       byPassword.set(hex, u);
     }
@@ -464,7 +464,7 @@ async function runTunnel(ws: WebSocket, early: Uint8Array | null, ctx: TunnelCon
         });
         const buf = new Uint8Array(await res.arrayBuffer());
         if (buf.length && !closed && ws.readyState === 1) {
-          let framed = encodeVlessUdpPacket(buf);
+          let framed = encodeProtoaUdpPacket(buf);
           if (respHeader && !headerSent) {
             framed = concat(respHeader, framed);
             headerSent = true;
@@ -541,24 +541,24 @@ async function runTunnel(ws: WebSocket, early: Uint8Array | null, ctx: TunnelCon
         let host = '';
         let port = 0;
         let payloadStart = 0;
-        let isVless = false;
+        let isProtoa = false;
         let version = 0;
         let command = 1;
         let matchedUser: User | null = null;
 
-        // first byte disambiguates: 0x00/0x01 = vless version (both appear in
-        // the wild), hex digit = trojan digest. neither => definitive reject
+        // first byte disambiguates: 0x00/0x01 = protoa version (both appear in
+        // the wild), hex digit = protob digest. neither => definitive reject
         // (no amount of extra bytes can turn it into a valid header).
-        const vless = raw[0] === 0x01 || raw[0] === 0x00 ? parseVlessHeader(raw, ctx.uuidList) : null;
-        const trojan =
-          !vless && ((raw[0] >= 0x30 && raw[0] <= 0x39) || (raw[0] >= 0x61 && raw[0] <= 0x66))
-            ? parseTrojanHeader(raw, ctx.passwordSet)
+        const protoa = raw[0] === 0x01 || raw[0] === 0x00 ? parseProtoaHeader(raw, ctx.uuidList) : null;
+        const protob =
+          !protoa && ((raw[0] >= 0x30 && raw[0] <= 0x39) || (raw[0] >= 0x61 && raw[0] <= 0x66))
+            ? parseProtobHeader(raw, ctx.passwordSet)
             : null;
 
-        if (!vless?.ok && !trojan?.ok) {
+        if (!protoa?.ok && !protob?.ok) {
           const truncated =
-            (vless !== null && !vless.ok && vless.short === true) ||
-            (trojan !== null && !trojan.ok && trojan.short === true);
+            (protoa !== null && !protoa.ok && protoa.short === true) ||
+            (protob !== null && !protob.ok && protob.short === true);
           if (truncated && raw.length < 512) {
             headerBuf = raw; // wait for the rest of the header
             return;
@@ -569,26 +569,26 @@ async function runTunnel(ws: WebSocket, early: Uint8Array | null, ctx: TunnelCon
         }
         headerBuf = new Uint8Array(0);
 
-        if (vless && vless.ok) {
-          const hex = bytesToHex(vless.uuidMatched).toLowerCase();
+        if (protoa && protoa.ok) {
+          const hex = bytesToHex(protoa.uuidMatched).toLowerCase();
           matchedUser = ctx.byUUIDHex.get(hex) || null;
-          host = vless.host;
-          port = vless.port;
-          payloadStart = vless.payloadStart;
-          isVless = true;
-          version = vless.version;
-          command = vless.command;
-        } else if (trojan && trojan.ok) {
-          matchedUser = ctx.byPassword.get(trojan.passwordHex) || null;
-          host = trojan.host;
-          port = trojan.port;
-          payloadStart = trojan.payloadStart;
-          isVless = false;
+          host = protoa.host;
+          port = protoa.port;
+          payloadStart = protoa.payloadStart;
+          isProtoa = true;
+          version = protoa.version;
+          command = protoa.command;
+        } else if (protob && protob.ok) {
+          matchedUser = ctx.byPassword.get(protob.passwordHex) || null;
+          host = protob.host;
+          port = protob.port;
+          payloadStart = protob.payloadStart;
+          isProtoa = false;
           command = 1;
         }
 
         if (!matchedUser) {
-          await logThrottled(env, `hs:${ctx.ip}`, 'guard', `handshake rejected from ${ctx.ip} (${vless && vless.ok ? 'uuid' : 'auth'})`);
+          await logThrottled(env, `hs:${ctx.ip}`, 'guard', `handshake rejected from ${ctx.ip} (${protoa && protoa.ok ? 'uuid' : 'auth'})`);
           await finish(1008, 'auth');
           return;
         }
@@ -639,7 +639,7 @@ async function runTunnel(ws: WebSocket, early: Uint8Array | null, ctx: TunnelCon
           // an orphaned connect() would hold one of the six outbound slots and
           // could kill a working DNS path with a spurious 1011.
           phase = 'udp';
-          respHeader = vlessResponseHeader(version);
+          respHeader = protoaResponseHeader(version);
           headerSent = false;
           if (firstPayload.length) await handleUdp(firstPayload);
         } else {
@@ -651,8 +651,8 @@ async function runTunnel(ws: WebSocket, early: Uint8Array | null, ctx: TunnelCon
             await pushLog(env, 'tunnel', `connect failed ${host}:${port} ${String(err).slice(0, 100)}`);
           }
           phase = 'tcp';
-          respHeader = isVless ? vlessResponseHeader(version) : null;
-          headerSent = respHeader === null; // trojan has no response header
+          respHeader = isProtoa ? protoaResponseHeader(version) : null;
+          headerSent = respHeader === null; // protob has no response header
           pumpRemote(0).catch(() => void finish(1011, 'pump'));
         }
 

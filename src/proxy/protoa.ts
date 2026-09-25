@@ -1,7 +1,7 @@
 import { equalBytes } from '../core/codecs.ts';
 
 /**
- * VLESS header parsing (client -> worker).
+ * PROTOA header parsing (client -> worker).
  *
  * Wire layout (matches Xray / BPB / edgetunnel parsers):
  *   [0]      version
@@ -21,12 +21,12 @@ export interface ParsedAddress {
   payloadStart: number;
 }
 
-export type VlessResult =
+export type ProtoaResult =
   | ({ ok: true; version: number; command: number; uuidMatched: Uint8Array } & ParsedAddress)
   /** `short: true` = input was truncated, caller should wait for more bytes */
   | { ok: false; reason: string; short?: boolean };
 
-/** address value only (VLESS puts the port *before* the address) */
+/** address value only (PROTOA puts the port *before* the address) */
 export function readAddressValue(
   data: Uint8Array,
   at: number,
@@ -64,7 +64,7 @@ export function readAddressValue(
  * @param knownUUIDs enabled-user UUID byte arrays; the header is accepted only
  *        when the embedded UUID matches one of them.
  */
-export function parseVlessHeader(data: Uint8Array, knownUUIDs: Uint8Array[]): VlessResult {
+export function parseProtoaHeader(data: Uint8Array, knownUUIDs: Uint8Array[]): ProtoaResult {
   // ver(1) + uuid(16): uuid cannot be judged before it is complete
   if (data.length < 17) return { ok: false, reason: 'short-header', short: true };
 
@@ -110,12 +110,12 @@ export function parseVlessHeader(data: Uint8Array, knownUUIDs: Uint8Array[]): Vl
 }
 
 /** [version, 0] response header the client expects before the first payload byte */
-export function vlessResponseHeader(version: number): Uint8Array {
+export function protoaResponseHeader(version: number): Uint8Array {
   return new Uint8Array([version, 0]);
 }
 
 /** UDP (cmd 2) payload framing: [len BE16][packet] repeated */
-export function encodeVlessUdpPacket(payload: Uint8Array): Uint8Array {
+export function encodeProtoaUdpPacket(payload: Uint8Array): Uint8Array {
   const out = new Uint8Array(2 + payload.length);
   out[0] = (payload.length >> 8) & 0xff;
   out[1] = payload.length & 0xff;

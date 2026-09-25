@@ -123,7 +123,7 @@ describe('config parity (edgetunnel/nahan reference quality)', () => {
   const hostRef = 'example.workers.dev';
   const userRef = makeUser({ name: 'parity' }, 0);
 
-  it('vless links carry encryption=none, trojan links never carry it', () => {
+  it('protoa links carry encryption=none, protob links never carry it', () => {
     const sV = { ...defaultSettings(), mode: 'a' as const };
     for (const l of buildLinks(userRef, sV, hostRef)) {
       assert.ok(l.startsWith('vless://'), l);
@@ -132,7 +132,7 @@ describe('config parity (edgetunnel/nahan reference quality)', () => {
     const sT = { ...defaultSettings(), mode: 'b' as const };
     for (const l of buildLinks(userRef, sT, hostRef)) {
       assert.ok(l.startsWith('trojan://'), l);
-      assert.ok(!l.includes('encryption'), `trojan must not carry encryption: ${l}`);
+      assert.ok(!l.includes('encryption'), `protob must not carry encryption: ${l}`);
     }
   });
 
@@ -148,10 +148,10 @@ describe('config parity (edgetunnel/nahan reference quality)', () => {
     }
   });
 
-  it('clash output carries servername (vless) / sni (trojan), alpn and fingerprint', () => {
+  it('clash output carries servername (protoa) / sni (protob), alpn and fingerprint', () => {
     const yaml = toClash(userRef, defaultSettings(), hostRef);
-    if (defaultSettings().mode !== 'b') assert.ok(/\n\s+servername:/.test(yaml), 'vless servername missing');
-    if (defaultSettings().mode !== 'a') assert.ok(/\n\s+sni:/.test(yaml), 'trojan sni missing');
+    if (defaultSettings().mode !== 'b') assert.ok(/\n\s+servername:/.test(yaml), 'protoa servername missing');
+    if (defaultSettings().mode !== 'a') assert.ok(/\n\s+sni:/.test(yaml), 'protob sni missing');
     assert.ok(/\n\s+alpn:\n\s+- http\/1\.1/.test(yaml), 'alpn block missing');
     assert.ok(/\n\s+client-fingerprint:/.test(yaml), 'fingerprint missing');
   });
@@ -184,7 +184,7 @@ describe('sing-box early-data (BPB style)', () => {
   it('transport has query-free path + max_early_data', () => {
     const cfg = JSON.parse(toSingBox(makeUser({ name: 'sb' }, 0), defaultSettings(), 'example.workers.dev'));
     const ob = cfg.outbounds.find((o: { type?: string }) => o.type === 'vless');
-    assert.ok(ob, 'vless outbound missing');
+    assert.ok(ob, 'protoa outbound missing');
     assert.equal(ob.transport.type, 'ws');
     assert.ok(!ob.transport.path.includes('?'), `path must be query-free: ${ob.transport.path}`);
     assert.equal(ob.transport.max_early_data, 2560);

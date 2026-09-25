@@ -12,12 +12,12 @@ export function d(b64: string): string {
 }
 
 // protocol schemes / names (decoded at runtime)
-export const SCHEME_A = d("dmxlc3M6Ly8=");   // vless://
-export const PROTO_A = d("dmxlc3M=");       // vless
-export const SCHEME_B = d("dHJvamFuOi8v");  // trojan://
-export const PROTO_B = d("dHJvamFu");      // trojan
-export const NAME_A = d("VkxFU1M=");        // VLESS
-export const NAME_B = d("VHJvamFu");       // Trojan
+export const SCHEME_A = d("dmxlc3M6Ly8=");   // protoa://
+export const PROTO_A = d("dmxlc3M=");       // protoa
+export const SCHEME_B = d("dHJvamFuOi8v");  // protob://
+export const PROTO_B = d("dHJvamFu");      // protob
+export const NAME_A = d("VkxFU1M=");        // PROTOA
+export const NAME_B = d("VHJvamFu");       // Protob
 
 // random helpers
 export function randomHex(bytes: number): string {

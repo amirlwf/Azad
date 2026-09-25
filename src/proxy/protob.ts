@@ -2,7 +2,7 @@ import { bytesToHex } from '../core/codecs.ts';
 import { sha224Bytes } from '../core/sha224.ts';
 
 /**
- * Trojan header parsing (client -> worker).
+ * Protob header parsing (client -> worker).
  *
  * Wire layout:
  *   hex(sha224(password))  56 bytes, lowercase hex
@@ -19,13 +19,13 @@ import { sha224Bytes } from '../core/sha224.ts';
 
 const decoder = new TextDecoder();
 
-export type TrojanResult =
+export type ProtobResult =
   | { ok: true; host: string; port: number; payloadStart: number; passwordHex: string }
   /** `short: true` = truncated, caller should wait for more bytes */
   | { ok: false; reason: string; short?: boolean };
 
-/** cheap shape check so we do not hash on clearly non-trojan traffic */
-export function looksLikeTrojan(data: Uint8Array): boolean {
+/** cheap shape check so we do not hash on clearly non-protob traffic */
+export function looksLikeProtob(data: Uint8Array): boolean {
   if (data.length < 59) return false;
   if (data[56] !== 0x0d || data[57] !== 0x0a) return false;
   for (let i = 0; i < 56; i++) {
@@ -36,11 +36,11 @@ export function looksLikeTrojan(data: Uint8Array): boolean {
   return true;
 }
 
-export function trojanPasswordHex(password: string): string {
+export function protobPasswordHex(password: string): string {
   return bytesToHex(sha224Bytes(new TextEncoder().encode(password)));
 }
 
-export function parseTrojanHeader(data: Uint8Array, knownPasswords: Set<string>): TrojanResult {
+export function parseProtobHeader(data: Uint8Array, knownPasswords: Set<string>): ProtobResult {
   if (data.length < 58) return { ok: false, reason: 'short-header', short: true };
 
   // hex(sha224) + CRLF — definitive shape check on the first 58 bytes

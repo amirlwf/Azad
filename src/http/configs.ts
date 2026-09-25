@@ -48,7 +48,7 @@ export function buildLinks(user: User, s: Settings, host: string): string[] {
       `&host=${encodeURIComponent(n.host)}&path=${encodeURIComponent(n.path)}` +
       tlsQuery(s, n.host, n.tls);
     if (n.proto === 'a') {
-      // VLESS URIs require the encryption attribute; trojan has none
+      // PROTOA URIs require the encryption attribute; protob has none
       links.push(`${SCHEME_A}${base}&encryption=none#${encodeURIComponent(n.name)}`);
     } else {
       links.push(`${SCHEME_B}${base}#${encodeURIComponent(n.name)}`);
@@ -164,7 +164,7 @@ export function toClash(user: User, s: Settings, host: string): string {
     // QUIC/app-UDP that would break (matches the reference panels)
     lines.push('    udp: false');
     if (n.tls) {
-      // field names differ per protocol in clash: servername for vless, sni for trojan
+      // field names differ per protocol in clash: servername for protoa, sni for protob
       lines.push(`    ${n.proto === 'a' ? 'servername' : 'sni'}: ${yamlQuote(n.host)}`);
       lines.push(`    client-fingerprint: ${yamlQuote(n.fingerprint)}`);
       lines.push('    alpn:');

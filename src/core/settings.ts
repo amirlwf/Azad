@@ -18,7 +18,7 @@ export interface Settings {
   adminPassHash: string;
   /** bumped on password change: orphan every session issued before it */
   sessionEpoch: number;
-  /** protocol selection: a = vless-only, b = trojan-only, both = a+b */
+  /** protocol selection: a = protoa-only, b = protob-only, both = a+b */
   mode: 'a' | 'b' | 'both';
   /** ports advertised in generated client configs */
   tlsPorts: number[];

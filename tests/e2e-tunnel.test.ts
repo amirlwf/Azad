@@ -22,7 +22,7 @@ let uuid = '';
 let echoPort = 0;
 let echo: Server;
 
-function vlessFrame(opts: { uuid: string; host: string; port: number; payload?: Uint8Array; command?: number }): Uint8Array {
+function protoaFrame(opts: { uuid: string; host: string; port: number; payload?: Uint8Array; command?: number }): Uint8Array {
   const hex = opts.uuid.replace(/-/g, '');
   const head: number[] = [0];
   for (let i = 0; i < 32; i += 2) head.push(parseInt(hex.slice(i, i + 2), 16));
@@ -42,7 +42,7 @@ function vlessFrame(opts: { uuid: string; host: string; port: number; payload?: 
   return out;
 }
 
-function trojanFrame(opts: { uuid: string; host: string; port: number; payload?: Uint8Array }): Uint8Array {
+function protobFrame(opts: { uuid: string; host: string; port: number; payload?: Uint8Array }): Uint8Array {
   const hash = createHash('sha224').update(opts.uuid).digest('hex');
   const head: number[] = [...hash].map((c) => c.charCodeAt(0));
   head.push(0x0d, 0x0a, 1);
@@ -187,11 +187,11 @@ after(() => {
 
 const skip = () => !live || !uuid;
 
-describe('e2e tunnel: vless over ws', () => {
+describe('e2e tunnel: protoa over ws', () => {
   it('round-trips a payload through the echo server', async () => {
     if (skip()) return;
     const payload = new TextEncoder().encode('hello from the e2e suite');
-    const frame = vlessFrame({ uuid, host: '127.0.0.1', port: echoPort, payload });
+    const frame = protoaFrame({ uuid, host: '127.0.0.1', port: echoPort, payload });
     const r = await dial(frame, { expect: 1, timeoutMs: 8000 });
 
     assert.equal(r.closeCode, null, `connection closed early: ${r.closeCode} ${r.closeReason}`);
@@ -201,7 +201,7 @@ describe('e2e tunnel: vless over ws', () => {
       all.set(m, off);
       off += m.length;
     }
-    assert.deepEqual([all[0], all[1]], [0, 0], 'vless response header must lead the stream');
+    assert.deepEqual([all[0], all[1]], [0, 0], 'protoa response header must lead the stream');
     const body = new TextDecoder().decode(all.subarray(2));
     assert.ok(body.includes('hello from the e2e suite'), `echo mismatch: ${JSON.stringify(body)}`);
   });
@@ -209,7 +209,7 @@ describe('e2e tunnel: vless over ws', () => {
   it('keeps the connection alive for a delayed follow-up (idle data)', async () => {
     if (skip()) return;
     const payload = new TextEncoder().encode('first');
-    const frame = vlessFrame({ uuid, host: '127.0.0.1', port: echoPort, payload });
+    const frame = protoaFrame({ uuid, host: '127.0.0.1', port: echoPort, payload });
     const r = await dial(frame, {
       expect: 2,
       timeoutMs: 10000,
@@ -224,7 +224,7 @@ describe('e2e tunnel: vless over ws', () => {
     if (skip()) return;
     const big = new Uint8Array(96 * 1024);
     for (let i = 0; i < big.length; i++) big[i] = i & 0xff;
-    const frame = vlessFrame({ uuid, host: '127.0.0.1', port: echoPort, payload: big });
+    const frame = protoaFrame({ uuid, host: '127.0.0.1', port: echoPort, payload: big });
     const r = await dial(frame, { expectBytes: 2 + big.length, timeoutMs: 15000 });
     const all = r.messages.reduce((n, m) => n + m.length, 0);
     // 2 header bytes + full echo (arrives across several messages)
@@ -235,7 +235,7 @@ describe('e2e tunnel: vless over ws', () => {
     if (skip()) return;
     const jobs = Array.from({ length: 4 }, (_, i) => {
       const payload = new TextEncoder().encode(`parallel-${i}`);
-      return dial(vlessFrame({ uuid, host: '127.0.0.1', port: echoPort, payload }), {
+      return dial(protoaFrame({ uuid, host: '127.0.0.1', port: echoPort, payload }), {
         expect: 1,
         timeoutMs: 8000,
       });
@@ -250,7 +250,7 @@ describe('e2e tunnel: vless over ws', () => {
   it('rejects a wrong uuid with close code 1008', async () => {
     if (skip()) return;
     const bad = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
-    const r = await dial(vlessFrame({ uuid: bad, host: '127.0.0.1', port: echoPort }), {
+    const r = await dial(protoaFrame({ uuid: bad, host: '127.0.0.1', port: echoPort }), {
       expect: 1,
       timeoutMs: 5000,
     });
@@ -261,7 +261,7 @@ describe('e2e tunnel: vless over ws', () => {
   it('blocks metadata destinations even in dev mode', async () => {
     if (skip()) return;
     const r = await dial(
-      vlessFrame({ uuid, host: '169.254.169.254', port: 80, payload: new TextEncoder().encode('GET /') }),
+      protoaFrame({ uuid, host: '169.254.169.254', port: 80, payload: new TextEncoder().encode('GET /') }),
       { expect: 1, timeoutMs: 5000 },
     );
     assert.equal(r.closeCode, 1011, `expected refusal, got ${r.closeCode}`);
@@ -281,15 +281,15 @@ describe('e2e tunnel: vless over ws', () => {
   });
 });
 
-describe('e2e tunnel: trojan over ws', () => {
+describe('e2e tunnel: protob over ws', () => {
   it('round-trips with the sha224 password handshake', async () => {
     if (skip()) return;
-    const payload = new TextEncoder().encode('trojan hello');
-    const frame = trojanFrame({ uuid, host: '127.0.0.1', port: echoPort, payload });
+    const payload = new TextEncoder().encode('protob hello');
+    const frame = protobFrame({ uuid, host: '127.0.0.1', port: echoPort, payload });
     const r = await dial(frame, { expect: 1, timeoutMs: 8000 });
     const text = r.messages.map((m) => new TextDecoder().decode(m)).join('');
-    assert.ok(text.includes('trojan hello'), `close=${r.closeCode} ${r.closeReason} body=${JSON.stringify(text)}`);
-    // trojan has no leading response header — first bytes are the echo itself
-    assert.ok(text.startsWith('trojan hello') || text.includes('trojan hello'));
+    assert.ok(text.includes('protob hello'), `close=${r.closeCode} ${r.closeReason} body=${JSON.stringify(text)}`);
+    // protob has no leading response header — first bytes are the echo itself
+    assert.ok(text.startsWith('protob hello') || text.includes('protob hello'));
   });
 });

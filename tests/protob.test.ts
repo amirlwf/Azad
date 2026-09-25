@@ -1,13 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { looksLikeTrojan, parseTrojanHeader, trojanPasswordHex } from '../src/proxy/trojan.ts';
+import { looksLikeProtob, parseProtobHeader, protobPasswordHex } from '../src/proxy/protob.ts';
 
 const PASSWORD = '11111111-2222-4333-8444-555555555555';
-const HASH = trojanPasswordHex(PASSWORD);
+const HASH = protobPasswordHex(PASSWORD);
 const known = new Set([HASH]);
 
-function buildTrojan(opts: {
+function buildProtob(opts: {
   hash?: string;
   host: string;
   port: number;
@@ -39,16 +39,16 @@ function buildTrojan(opts: {
   return out;
 }
 
-describe('trojan header parsing', () => {
+describe('protob header parsing', () => {
   it('sha224 password matches node:crypto via the wire hash', () => {
     assert.match(HASH, /^[0-9a-f]{56}$/);
     assert.equal(HASH, createHash('sha224').update(PASSWORD).digest('hex'));
   });
 
   it('parses a domain target (atyp 3)', () => {
-    const pkt = buildTrojan({ host: 'example.com', port: 443, payload: 'hello' });
-    assert.equal(looksLikeTrojan(pkt), true);
-    const r = parseTrojanHeader(pkt, known);
+    const pkt = buildProtob({ host: 'example.com', port: 443, payload: 'hello' });
+    assert.equal(looksLikeProtob(pkt), true);
+    const r = parseProtobHeader(pkt, known);
     assert.equal(r.ok, true);
     if (!r.ok) return;
     assert.equal(r.host, 'example.com');
@@ -58,31 +58,31 @@ describe('trojan header parsing', () => {
   });
 
   it('parses IPv4 (atyp 1) and IPv6 (atyp 4)', () => {
-    const v4 = parseTrojanHeader(buildTrojan({ host: '1.2.3.4', port: 80 }), known);
+    const v4 = parseProtobHeader(buildProtob({ host: '1.2.3.4', port: 80 }), known);
     assert.equal(v4.ok && v4.host, '1.2.3.4');
     assert.equal(v4.ok && v4.port, 80);
 
-    const v6 = parseTrojanHeader(buildTrojan({ host: '2001:db8:0:0:0:0:0:1', port: 443 }), known);
+    const v6 = parseProtobHeader(buildProtob({ host: '2001:db8:0:0:0:0:0:1', port: 443 }), known);
     assert.equal(v6.ok && v6.host, '2001:db8:0:0:0:0:0:1');
   });
 
   it('rejects an unknown password hash', () => {
-    const pkt = buildTrojan({ host: 'example.com', port: 443, hash: 'f'.repeat(56) });
-    const r = parseTrojanHeader(pkt, known);
+    const pkt = buildProtob({ host: 'example.com', port: 443, hash: 'f'.repeat(56) });
+    const r = parseProtobHeader(pkt, known);
     assert.equal(r.ok, false);
     assert.equal(r.ok === false && r.reason, 'password-mismatch');
   });
 
   it('rejects packets that do not have the 56-hex + CRLF prefix', () => {
-    assert.equal(looksLikeTrojan(new Uint8Array(100)), false);
-    assert.equal(looksLikeTrojan(buildTrojan({ host: 'x.com', port: 1 }).subarray(0, 40)), false);
-    const bad = buildTrojan({ host: 'x.com', port: 443 });
+    assert.equal(looksLikeProtob(new Uint8Array(100)), false);
+    assert.equal(looksLikeProtob(buildProtob({ host: 'x.com', port: 1 }).subarray(0, 40)), false);
+    const bad = buildProtob({ host: 'x.com', port: 443 });
     bad[10] = 0x41; // 'A' is not lowercase hex
-    assert.equal(looksLikeTrojan(bad), false);
+    assert.equal(looksLikeProtob(bad), false);
   });
 
   it('rejects unsupported commands', () => {
-    const r = parseTrojanHeader(buildTrojan({ host: 'example.com', port: 443, cmd: 2 }), known);
+    const r = parseProtobHeader(buildProtob({ host: 'example.com', port: 443, cmd: 2 }), known);
     assert.equal(r.ok, false);
     assert.equal(r.ok === false && r.reason, 'unsupported-command');
   });
