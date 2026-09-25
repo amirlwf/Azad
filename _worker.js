@@ -1103,11 +1103,16 @@ $('#s-save').addEventListener('click', async () => {
     portalEnabled: $('#s-portal').checked,
   };
   try {
+    const oldPath = state.settings?.adminPath;
     const r = await call('/settings', { method:'PUT', body });
     state.settings = r.settings;
     $('#s-status').textContent = t('saved');
     setTimeout(() => $('#s-status').textContent = '', 2500);
     renderPanelUrl();
+    if (body.adminPath && oldPath && body.adminPath !== oldPath) {
+      // the panel moved \u2014 follow the new address before the next reload 404s
+      setTimeout(() => { location.href = '/' + body.adminPath; }, 900);
+    }
   } catch (err) { toast(err.message, true); }
 });
 
@@ -5572,6 +5577,12 @@ var worker_default = {
       }
       if (path.startsWith(`/${settings.subPath}/`)) {
         return handleSubscription(request, env, settings, url);
+      }
+      if (!settings.adminPassHash && (request.method === "GET" || request.method === "HEAD")) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: `/${settings.adminPath}` }
+        });
       }
       return handleCamo(request, env, settings);
     } catch (err) {

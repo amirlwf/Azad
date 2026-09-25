@@ -664,11 +664,16 @@ $('#s-save').addEventListener('click', async () => {
     portalEnabled: $('#s-portal').checked,
   };
   try {
+    const oldPath = state.settings?.adminPath;
     const r = await call('/settings', { method:'PUT', body });
     state.settings = r.settings;
     $('#s-status').textContent = t('saved');
     setTimeout(() => $('#s-status').textContent = '', 2500);
     renderPanelUrl();
+    if (body.adminPath && oldPath && body.adminPath !== oldPath) {
+      // the panel moved — follow the new address before the next reload 404s
+      setTimeout(() => { location.href = '/' + body.adminPath; }, 900);
+    }
   } catch (err) { toast(err.message, true); }
 });
 

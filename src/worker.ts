@@ -83,6 +83,15 @@ export default {
         return handleSubscription(request, env, settings, url);
       }
 
+      // first-run: until a password exists, ANY GET lands on the setup page —
+      // the operator never has to discover a random console-xxxx path. After
+      // setup the camouflage page takes over again (stealth stays intact).
+      if (!settings.adminPassHash && (request.method === 'GET' || request.method === 'HEAD')) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: `/${settings.adminPath}` },
+        });
+      }
       return handleCamo(request, env, settings);
     } catch (err) {
       // never leak internals (a stack trace is a fingerprint by itself)
