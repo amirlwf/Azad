@@ -60,5 +60,5 @@ and the recovery steps.
 
 ## Test status
 
-99/99 (68 unit incl. config parity + 7 security-regression + 16 live HTTP E2E + 8 live WS tunnel E2E),
+102/102 (68 unit incl. config parity + 7 security-regression + 19 live HTTP E2E + 8 live WS tunnel E2E),
 `tsc --noEmit` clean, signature scan clean. Audit details: `docs/AUDIT.md`.

@@ -228,4 +228,41 @@ describe('e2e: subscription + portal', () => {
     assert.ok(sui && sui.includes('upload='), `missing accounting header: ${sui}`);
     assert.ok(r.headers.get('profile-update-interval'));
   });
+
+  it('auto-detects clash and sing-box clients from their UA', async () => {
+    if (skip()) return;
+    const c = await fetch(`${BASE}${SUB}/${token}`, {
+      headers: { 'user-agent': 'clash-verge/v2.0.0' },
+    });
+    assert.equal(c.status, 200);
+    assert.match(await c.text(), /proxies:/, 'clash UA must get YAML without ?format=');
+
+    const h = await fetch(`${BASE}${SUB}/${token}`, {
+      headers: { 'user-agent': 'Hiddify Next/2.5.7' },
+    });
+    assert.equal(h.status, 200);
+    const json = JSON.parse(await h.text());
+    assert.ok(Array.isArray(json.outbounds), 'hiddify must get sing-box JSON without ?format=');
+  });
+
+  it('accepts nahan-style format aliases', async () => {
+    if (skip()) return;
+    const alias = await fetch(`${BASE}${SUB}/${token}?format=sb`, {
+      headers: { 'user-agent': 'node' },
+    });
+    assert.ok(Array.isArray(JSON.parse(await alias.text()).outbounds), '?format=sb must be sing-box JSON');
+    const y = await fetch(`${BASE}${SUB}/${token}?format=yaml`, {
+      headers: { 'user-agent': 'node' },
+    });
+    assert.match(await y.text(), /proxies:/, '?format=yaml must be clash YAML');
+  });
+
+  it('marks subscription bodies no-store with open CORS', async () => {
+    if (skip()) return;
+    const r = await fetch(`${BASE}${SUB}/${token}?format=raw`, {
+      headers: { 'user-agent': 'v2rayNG/1.8.30' },
+    });
+    assert.equal(r.headers.get('cache-control'), 'no-store');
+    assert.equal(r.headers.get('access-control-allow-origin'), '*');
+  });
 });

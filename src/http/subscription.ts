@@ -50,6 +50,32 @@ function isClientUA(ua: string): boolean {
   return CLIENT_UA.some((m) => m && low.includes(m));
 }
 
+/** UA fallback when `?format=` is absent (nahan/edgetunnel behaviour):
+ * clash-family agents get YAML, sing-box-family agents get JSON, nobody
+ * needs to know the query parameter. Explicit params always win. */
+const CLASH_UA = ['clash', 'mihomo', 'cfw', 'stash', 'verge', 'feather'];
+const SINGBOX_UA = ['sing-box', 'singbox', 'hiddify', 'nekobox', 'nekoray', 'sfa', 'karing'];
+
+function normalizeFormat(raw: string): string {
+  if (!raw) return '';
+  if (raw === 'clash' || raw === 'yaml' || raw === 'meta' || raw === 'stash' || raw === 'clash-meta' || raw === 'y') {
+    return 'clash';
+  }
+  if (raw === 'singbox' || raw === 'sing-box' || raw === 'sb' || raw === 'sing' || raw === 's') {
+    return 'singbox';
+  }
+  if (raw === 'base64' || raw === 'b64' || raw === 'b') return 'base64';
+  return raw;
+}
+
+function formatFromUA(ua: string): string {
+  const low = (ua || '').toLowerCase();
+  if (!low) return '';
+  if (CLASH_UA.some((m) => low.includes(m))) return 'clash';
+  if (SINGBOX_UA.some((m) => low.includes(m))) return 'singbox';
+  return '';
+}
+
 function htmlResponse(html: string, status = 200): Response {
   return new Response(html, {
     status,
@@ -101,10 +127,16 @@ export async function handleSubscription(
   }
 
   const host = settings.host || url.hostname;
-  const format = (url.searchParams.get('format') || url.searchParams.get('flag') || '').toLowerCase();
+  const ua = request.headers.get('User-Agent') || '';
+  const explicitFormat = normalizeFormat(
+    (url.searchParams.get('format') || url.searchParams.get('flag') || '').toLowerCase(),
+  );
+  // no explicit format → let the client's UA pick the right body
+  const format = explicitFormat || formatFromUA(ua);
   const state = userState(user);
-  const wantsPage =
-    settings.portalEnabled && !format && (isClientUA(request.headers.get('User-Agent') || '') ? false : true);
+  // portal only for plain browsers: explicit format, a clash/sing-box UA, or
+  // any known proxy-client UA must always get the subscription body
+  const wantsPage = settings.portalEnabled && !explicitFormat && !format && !isClientUA(ua);
 
   if (wantsPage) {
     const payload = portalPayload(user, settings, host);

@@ -284,6 +284,8 @@ export function subscriptionHeaders(
     'profile-title': `base64:${toBase64(s.brand)}`,
     'profile-update-interval': '6',
     'content-disposition': `attachment; filename="${filename}"`,
+    'cache-control': 'no-store',
+    'access-control-allow-origin': '*',
   };
   const total = user.limitBytes > 0 ? user.limitBytes : 0;
   const expire = user.expires !== null ? Math.floor(user.expires / 1000) : 0;
