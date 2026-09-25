@@ -30,7 +30,7 @@ export function endpoints(s: Settings): Endpoint[] {
 }
 
 function wsPath(s: Settings): string {
-  return `${s.wsPath}?ed=${s.earlyData}`;
+  return s.earlyData > 0 ? `${s.wsPath}?ed=${s.earlyData}` : s.wsPath;
 }
 
 function tlsQuery(s: Settings, host: string, tls: boolean): string {
@@ -44,13 +44,18 @@ export function buildLinks(user: User, s: Settings, host: string): string[] {
   for (const ep of endpoints(s)) {
     i++;
     const path = encodeURIComponent(wsPath(s));
+    // same attribute order as the reference generators (security, type, host,
+    // path, tls block) so client-side parsing quirks never bite
     const base =
       `${user.uuid}@${host}:${ep.port}` +
       `?security=${ep.tls ? 'tls' : 'none'}&type=ws` +
       `&host=${encodeURIComponent(host)}&path=${path}` +
       tlsQuery(s, host, ep.tls);
     if (s.mode !== 'b') {
-      links.push(`${SCHEME_A}${base}#${encodeURIComponent(`${s.brand}-${ep.port}-${NAME_A}-${i}`)}`);
+      // VLESS URIs require the encryption attribute; trojan has none
+      links.push(
+        `${SCHEME_A}${base}&encryption=none#${encodeURIComponent(`${s.brand}-${ep.port}-${NAME_A}-${i}`)}`,
+      );
     }
     if (s.mode !== 'a') {
       links.push(`${SCHEME_B}${base}#${encodeURIComponent(`${s.brand}-${ep.port}-${NAME_B}-${i}`)}`);
@@ -79,6 +84,7 @@ interface NodeSpec {
   userId: string;
   fingerprint: string;
   path: string;
+  earlyData: number;
 }
 
 function nodeSpecs(user: User, s: Settings, host: string): NodeSpec[] {
@@ -96,6 +102,7 @@ function nodeSpecs(user: User, s: Settings, host: string): NodeSpec[] {
         userId: user.uuid,
         fingerprint: s.fingerprint,
         path: wsPath(s),
+        earlyData: s.earlyData,
       });
     }
     if (s.mode !== 'a') {
@@ -108,6 +115,7 @@ function nodeSpecs(user: User, s: Settings, host: string): NodeSpec[] {
         userId: user.uuid,
         fingerprint: s.fingerprint,
         path: wsPath(s),
+        earlyData: s.earlyData,
       });
     }
   }
@@ -142,11 +150,24 @@ export function toClash(user: User, s: Settings, host: string): string {
     lines.push(`    ${n.proto === 'a' ? 'uuid' : 'password'}: ${yamlQuote(n.userId)}`);
     lines.push('    network: ws');
     lines.push(`    tls: ${n.tls}`);
-    if (n.proto === 'b') lines.push(`    sni: ${yamlQuote(n.host)}`);
-    lines.push('    udp: true');
-    if (n.tls) lines.push(`    client-fingerprint: ${yamlQuote(n.fingerprint)}`);
+    // our UDP path only carries DNS: advertise false so clients never send
+    // QUIC/app-UDP that would break (matches the reference panels)
+    lines.push('    udp: false');
+    if (n.tls) {
+      // field names differ per protocol in clash: servername for vless, sni for trojan
+      lines.push(`    ${n.proto === 'a' ? 'servername' : 'sni'}: ${yamlQuote(n.host)}`);
+      lines.push(`    client-fingerprint: ${yamlQuote(n.fingerprint)}`);
+      lines.push('    alpn:');
+      lines.push('      - http/1.1');
+    }
     lines.push('    ws-opts:');
-    lines.push(`      path: ${yamlQuote(n.path)}`);
+    // clash does not parse `?ed=` out of the path — strip the query and use
+    // the real early-data mechanism (header name our server already reads)
+    lines.push(`      path: ${yamlQuote(n.path.split('?')[0])}`);
+    if (n.earlyData > 0) {
+      lines.push(`      max-early-data: ${n.earlyData}`);
+      lines.push('      early-data-header-name: Sec-WebSocket-Protocol');
+    }
     lines.push('      headers:');
     lines.push(`        Host: ${yamlQuote(n.host)}`);
   }
@@ -181,7 +202,6 @@ export function toSingBox(user: User, s: Settings, host: string): string {
       tag: n.name,
       server: n.host,
       server_port: n.port,
-      network: 'ws',
       tcp_fast_open: false,
       domain_resolver: 'dns-direct',
     };
@@ -192,10 +212,19 @@ export function toSingBox(user: User, s: Settings, host: string): string {
         enabled: true,
         server_name: n.host,
         insecure: false,
+        alpn: ['http/1.1'],
         utls: { enabled: true, fingerprint: n.fingerprint },
       };
     }
-    ob.transport = { type: 'ws', path: n.path, headers: { Host: n.host } };
+    // BPB reference: query-free path + explicit early-data fields
+    ob.transport = {
+      type: 'ws',
+      path: n.path.split('?')[0],
+      ...(n.earlyData > 0
+        ? { max_early_data: n.earlyData, early_data_header_name: 'Sec-WebSocket-Protocol' }
+        : {}),
+      headers: { Host: n.host },
+    };
     outbounds.push(ob);
   }
 

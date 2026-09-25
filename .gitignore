@@ -4,3 +4,6 @@ src/generated/
 .wrangler/
 *.log
 .env
+
+# local research material (video transcripts), never commit
+1101*/

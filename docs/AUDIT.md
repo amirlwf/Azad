@@ -2,7 +2,7 @@
 
 Two independent audits were run against the implementation (tunnel correctness vs.
 reference panels; security of the admin API / anti-abuse design). This file tracks
-every finding and what was done about it. Test evidence: 93/93 automated tests
+every finding and what was done about it. Test evidence: 99/99 automated tests
 (62 unit + 7 security regressions + 16 live HTTP E2E + 8 live WS tunnel E2E).
 
 ## Fixed — tunnel correctness (`src/proxy/ws.ts` unless noted)

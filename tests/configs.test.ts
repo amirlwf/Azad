@@ -117,3 +117,77 @@ describe('subscription headers', () => {
     assert.equal(h['profile-update-interval'], '6');
   });
 });
+
+
+describe('config parity (edgetunnel/nahan reference quality)', () => {
+  const hostRef = 'example.workers.dev';
+  const userRef = makeUser({ name: 'parity' }, 0);
+
+  it('vless links carry encryption=none, trojan links never carry it', () => {
+    const sV = { ...defaultSettings(), mode: 'a' as const };
+    for (const l of buildLinks(userRef, sV, hostRef)) {
+      assert.ok(l.startsWith('vless://'), l);
+      assert.ok(l.includes('&encryption=none'), `missing encryption attr: ${l}`);
+    }
+    const sT = { ...defaultSettings(), mode: 'b' as const };
+    for (const l of buildLinks(userRef, sT, hostRef)) {
+      assert.ok(l.startsWith('trojan://'), l);
+      assert.ok(!l.includes('encryption'), `trojan must not carry encryption: ${l}`);
+    }
+  });
+
+  it('every tls link has sni + fingerprint + alpn and an early-data path', () => {
+    const sV = { ...defaultSettings(), mode: 'a' as const };
+    for (const l of buildLinks(userRef, sV, hostRef)) {
+      const u = new URL(l);
+      if (u.searchParams.get('security') !== 'tls') continue;
+      assert.ok(u.searchParams.get('sni'), l);
+      assert.ok(u.searchParams.get('fp'), l);
+      assert.ok(u.searchParams.get('alpn'), l);
+      assert.ok(u.searchParams.get('path')?.includes('ed='), `early data missing: ${l}`);
+    }
+  });
+
+  it('clash output carries servername (vless) / sni (trojan), alpn and fingerprint', () => {
+    const yaml = toClash(userRef, defaultSettings(), hostRef);
+    if (defaultSettings().mode !== 'b') assert.ok(/\n\s+servername:/.test(yaml), 'vless servername missing');
+    if (defaultSettings().mode !== 'a') assert.ok(/\n\s+sni:/.test(yaml), 'trojan sni missing');
+    assert.ok(/\n\s+alpn:\n\s+- http\/1\.1/.test(yaml), 'alpn block missing');
+    assert.ok(/\n\s+client-fingerprint:/.test(yaml), 'fingerprint missing');
+  });
+
+  it('sing-box outbounds pin tls alpn and do not use the obsolete network field', () => {
+    const cfg = JSON.parse(toSingBox(userRef, defaultSettings(), hostRef));
+    const real = cfg.outbounds.find((o: any) => o.type === 'vless' || o.type === 'trojan');
+    assert.ok(real, 'no protocol outbound');
+    assert.ok(!('network' in real), 'obsolete top-level network field must be gone');
+    assert.ok(real.transport?.type === 'ws');
+    assert.deepEqual(real.tls.alpn, ['http/1.1']);
+  });
+});
+
+
+describe('clash early-data + udp honesty', () => {
+  it('uses max-early-data (not ?ed= in path) and udp: false', () => {
+    const yaml = toClash(makeUser({ name: 'ed' }, 0), defaultSettings(), 'example.workers.dev');
+    assert.ok(yaml.includes('max-early-data: 2560'), 'max-early-data missing');
+    assert.ok(yaml.includes('early-data-header-name: Sec-WebSocket-Protocol'), 'early-data header missing');
+    assert.ok(/\n\s+udp: false/.test(yaml), 'udp must be false (our UDP path is DNS-only)');
+    const m = /ws-opts:\n\s+path: '([^']+)'/.exec(yaml);
+    assert.ok(m, 'ws-opts.path missing');
+    assert.ok(!m[1].includes('ed='), `clash path must be query-free: ${m[1]}`);
+  });
+});
+
+
+describe('sing-box early-data (BPB style)', () => {
+  it('transport has query-free path + max_early_data', () => {
+    const cfg = JSON.parse(toSingBox(makeUser({ name: 'sb' }, 0), defaultSettings(), 'example.workers.dev'));
+    const ob = cfg.outbounds.find((o: { type?: string }) => o.type === 'vless');
+    assert.ok(ob, 'vless outbound missing');
+    assert.equal(ob.transport.type, 'ws');
+    assert.ok(!ob.transport.path.includes('?'), `path must be query-free: ${ob.transport.path}`);
+    assert.equal(ob.transport.max_early_data, 2560);
+    assert.equal(ob.transport.early_data_header_name, 'Sec-WebSocket-Protocol');
+  });
+});

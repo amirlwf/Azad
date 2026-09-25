@@ -1,59 +1,152 @@
-# Azad Panel
+# پنل آزاد — Azad Panel
 
-A self-hosted Cloudflare Workers proxy panel: **VLESS + Trojan over WebSocket**, with a
-bilingual (fa/en, RTL/LTR) admin panel, user subscription portal, client-config generators
-(`vless://`, Clash, sing-box) and a camouflage page — built for **stealth and abuse-resistance**
-rather than raw feature count.
+پنل پروکسی روی **Cloudflare Workers**: پروتکل‌های VLESS و Trojan روی WebSocket، پنل ادمین دوزبانه، پورتال کاربر، و تولید کانفیگ آماده برای همه‌ی کلاینت‌ها (`vless://`، base64، Clash، sing-box).
 
-> Deployed output (`dist/worker.js`) contains **no recognizable proxy-project signatures** —
-> a build-time scanner fails the build if any appear (see `scripts/build.js`).
+[README in English](README.en.md)
 
-## Why it exists
+---
 
-Cloudflare Error 1101 bans follow a predictable pattern: recognizable code signatures at
-deploy time, banned project/worker names, open-proxy behaviour (no destination validation,
-no rate limits) and post-review traffic volume. Research notes: `docs/RESEARCH-ban-rootcause.md`.
-Every countermeasure here is architectural:
+## ⚠️ اول این را بخوان: از کجا Error 1101 می‌گیریم؟ (بر اساس ویدیوی آموزشی CM)
 
-- obfuscated protocol constants + signature scanner gate (`dist/worker.js` must be clean)
-- egress guard: private/metadata IP block (always, even in local dev), port allow-list,
-  hostname destinations pre-resolved through DoH and validated before `connect()`
-- rate limits: upgrades/min, login attempts, subscription fetches, per-user connection caps,
-  Cloudflare's 6-outbound-connection budget respected (`ISOLATE_BUDGET = 5`)
-- PBKDF2-hashed admin password (not plaintext KV), 192-bit session tokens, CSRF origin check
+کلادفلر از **۴ جهت** پروژه را می‌گیرد و خطای 1101 می‌دهد. هر کدام راه‌حل جدا دارد:
 
-## Layout
+| # | شرط بن شدن | چطور تشخیص بده | راه‌حل |
+|---|------------|----------------|--------|
+| ۱ | **امضای کد** — در لحظه‌ی **هر** deploy (نه فقط اولی) سورس را اسکن می‌کند؛ اگر توکن‌های شناخته‌شده به آستانه برسند → 1101 | همان لحظه‌ی «Save and Deploy» | **کار ما حل است:** build این پنل از اول توکن ممنوع نمی‌سازد و `scripts/build.js` قبل از تحویل، `dist/worker.js` را اسکن می‌کند و اگر چیزی پیدا کند، build را خراب می‌کند |
+| ۲ | **بیش از حدود ۱۱۰هزار درخواست در روز** → بازبینی مجدد کد → رد شود → 1101. معمولاً «۲ روز کار می‌کرد روز سوم پرید» یعنی همین | پروژه‌ای که چند روز سالم بود ناگهان 1101 داد | روی **Workers** بمان (نه Pages): سقف ۱۰۰هزار/روز → اگر رد شوی **خطای 1027** می‌گیری = کلید ایمنی؛ پروژه سیاه نمی‌شود و **۸ صبح به وقت پکن** ریست می‌شود. استفاده‌ی روزانه را متعادل نگه دار |
+| ۳ | **اسم پروژه** — اگر نام Worker/Pages حاوی `edgetunnel`، `edtunnel`، `bpb`، `vless`، `trojan` و... باشد → 1101. (اسم در GitHub مهم نیست، فقط اسم پروژه‌ی CF) | همان اولین deploy | اسم دستی و بی‌ربط بده. پیش‌فرض این پروژه `azad-gw` است (تمیز). **بعد از 1101، همان اسم سیاه می‌شود** — پروژه را حذف کن و با اسم جدید بساز؛ حتی «Hello World» هم دیگر بالا نمی‌آید |
+| ۴ | **دومین سیاه‌شده** — زیردامنه `workers.dev` یا دامنه‌ی سفارشی در لیست سیاه | حتی یک Worker خالی هم 1101 می‌دهد؛ یا دامنه‌ی سفارشی **522** می‌دهد ولی دامنه‌ی CF سالم است | زیردامنه: Workers & Pages ← پایین صفحه ← «Modify» زیردامنه ← بعد از صدور گواهی SSL دوباره تست. دامنه‌ی سفارشی (خطای 522): **فقط اولین برچسب** را عوض کن (`tg.` ← `123.`)؛ دامنه‌ی اصلی همان می‌ماند |
 
-```
-src/core      settings, users, auth (PBKDF2), KV store, egress guard, rate limiters, logs, sha224
-src/proxy     vless/trojan header parsers + the WebSocket tunnel (ws.ts)
-src/http      admin API, subscription/portal, config builders, camouflage proxy
-src/ui        panel.html (admin), portal.html (user), camo.html
-src/worker.ts entrypoint / routing
-scripts/build.js  inline UI -> bundle -> minify -> signature scan
-tests/        92 tests: unit + live E2E (HTTP) + live E2E (WS tunnel round-trips)
-docs/         audit findings & fix status, ban root-cause research
-```
+**تشخیص سریع سلامت زیردامنه:** یک Worker خالی بساز، متن `123123` را deploy کن و بازدید کن. دیدی `123123` = زیردامنه سالم است؛ دیدی 1101 = زیردامنه سیاه شده (راه‌حل ردیف ۴).
 
-## Commands
+**درباره‌ی اوبفوسکیشن (مهم):** اوبفوسکیشن سنگین هم کد را کند می‌کند (قطعی و سرعت پایین در استفاده‌ی روزانه) و هم شانس رد شدن در بازبینی ۱۱۰هزار تایی را بالا می‌برد. استراتژی این پنل: **کدِ خوانا با امضای حذف‌شده** — فقط constantهای پروتکل base64 شده‌اند و build مینیمایز می‌شود؛ نه اوبفوسکیشن سنگین، نه سورس خام.
+
+---
+
+## دقیقاً چه کاری باید بکنی؟ (استقرار گام‌به‌گام)
+
+**گام ۱ — ساخت خروجی:**
 
 ```bash
-npm install --include=dev
-node scripts/build.js                 # bundle + minify + signature scan (fails on banned tokens)
-npx tsc --noEmit                      # typecheck
-node --test --experimental-transform-types tests/*.test.ts
-# for the E2E suites, first run:
+node scripts/build.js
+```
+
+باید آخرش بنویسد: `✓ signature scan clean` — اگر اسکنر خطایی بگیرد، deploy نکن.
+
+**گام ۲ — تست محلی (اختیاری ولی توصیه‌شده):**
+
+```bash
 npx wrangler dev --port 8787 --var LOCAL_TEST:1
 ```
 
-## Deploy
+**گام ۳ — ساخت فضای KV:**
 
-1. `node scripts/build.js`
-2. Create a KV namespace, put its id into `wrangler.toml`
-3. `npx wrangler deploy`
-4. Open the admin path shown in the panel settings (random per instance)
+```bash
+npx wrangler kv namespace create AZAD_KV
+```
 
-## Test status
+شناسه‌ی برگشتی را در `wrangler.toml` جای `00000000000000000000000000000000` بگذار.
 
-93/93 (62 unit + 7 security-regression + 16 live HTTP E2E + 8 live WS tunnel E2E),
-`tsc --noEmit` clean, signature scan clean. Audit details: `docs/AUDIT.md`.
+**گام ۴ — استقرار روی Workers (نه Pages):**
+
+```bash
+npx wrangler deploy
+```
+
+اگر با wrangler کار نمی‌کنی، `dist/worker.js` را در داشبورد CF → Create Worker → Edit code کپی-پیست کن؛ **اسم پروژه را دستی و بدون کلمات ممنوعه انتخاب کن** (مثل `azad-gw` یا هر چیز بی‌ربط).
+
+**گام ۵ — اولین بازدید:** آدرس `workers.dev` + مسیر تونل باز شد؟ یعنی سالم است. اگر **1101** آمد → جدول بالا (معمولاً ردیف ۳ یا ۴).
+
+**گام ۶ — راه‌اندازی پنل:** از خود پنل مسیر ادمین را بردار، وارد شو، رمز بگذار (فقط یک بار اول کار)، بعد از تنظیمات → کاربر بساز → لینک کانفیگ/QR بگیر.
+
+**گام ۷ — استفاده‌ی روزانه:** زیر حدود ۱۰۰هزار درخواست در روز. اگر Workers **1027** داد یعنی سقف روزانه است — طبیعی است، فردا (۸ صبح پکن) برمی‌گردد و پروژه سیاه نشده.
+
+**اگر روزی 1101 گرفتی (روال نجات):**
+
+1. پروژه را **حذف کن** (کد را عوض کردن فایده ندارد، حتی Hello World بالا نمی‌آید)
+2. پروژه‌ی جدید با **اسم جدید** بساز
+3. همان `dist/worker.js` را دوباره deploy کن — کد ما امضای ممنوع ندارد
+4. اگر دامنه‌ی سفارشی 522 داد: اولین برچسبش را عوض کن
+
+---
+
+## کانفیگ‌ها — مثل نهان و اج
+
+اشتراک هر کاربر همه‌ی فرمت‌ها را با پارامتر `?format=` می‌دهد:
+
+| فرمت | آدرس | کلاینت‌ها |
+|------|------|-----------|
+| لینک خام | `/{مسیر-اشتراک}/{توکن}` | v2rayNG، NekoBox، هیدیفای (لینک `vless://` و `trojan://`) |
+| base64 | `...?format=base64` | کلاینت‌های اشتراک قدیمی |
+| Clash | `...?format=clash` | Clash.Meta / verge / mihomo |
+| sing-box | `...?format=singbox` | sing-box / Hiddify / Nekoray |
+| پورتال + QR | همان آدرس در مرورگر | همه |
+
+کیفیت خروجی (هم‌تراز با اج‌تونل/نهاهان):
+
+- لینک کامل: `security`، `type=ws`، `host`، `path` با early-data `?ed=2560`، `sni`، `fp=chrome`، `alpn`، و `encryption=none` برای VLESS
+- Clash: `servername`/`sni` درست، `client-fingerprint`، `alpn`، و early-data با `max-early-data` + `early-data-header-name` (مسیر بدون کوئری)، `udp: false` تا کلاینت ترافیک UDP خراب نفرستد
+- sing-box: JSON کامل قابل import با tls + utls + transport و مسیر `?ed=`
+- هدر `subscription-userinfo` برای نمایش مصرف در کلاینت‌ها
+- اسم نودها از **برند** ساخته می‌شود — در تنظیمات، برند را فارسی (مثلاً `آزاد`) کنی، همه‌ی اسم‌ها در لینک/Clash/پورتال فارسی می‌شوند
+
+---
+
+## ساختار پروژه
+
+```
+src/core      تنظیمات، کاربران، احراز هویت، KV، گارد خروج، rate limiter، لاگ، sha224
+src/proxy     پارسر هدرها + تونل WebSocket (ws.ts)
+src/http      API ادمین، اشتراک/پورتال، سازنده‌ی کانفیگ، پروکسی camo
+src/ui        panel.html (ادمین)، portal.html (کاربر)، camo.html
+src/worker.ts نقطه‌ی ورود / مسیریابی
+scripts/build.js   درون‌سازی UI → باندل → مینیمایز → اسکن امضای کد
+tests/        تست‌های یونیت + رگرسیون امنیتی + E2E زنده (HTTP و تونل WS)
+docs/         تحقیق 1101 و وضعیت audit
+```
+
+## دستورات توسعه
+
+نصب وابستگی‌ها:
+
+```bash
+npm install --include=dev
+```
+
+ساخت + اسکنر امضا:
+
+```bash
+node scripts/build.js
+```
+
+بررسی نوع‌ها:
+
+```bash
+npx tsc --noEmit
+```
+
+کل تست‌ها:
+
+```bash
+node --test --experimental-transform-types tests/*.test.ts
+```
+
+اجرای سرور محلی (برای تست‌های E2E):
+
+```bash
+npx wrangler dev --port 8787 --var LOCAL_TEST:1
+```
+
+## امنیت و ضدبن (خلاصه)
+
+- اسکنر امضای کد در هر build — توکن ممنوع در خروجی deploy = شکستن build
+- گارد مقصد: IP خصوصی/metadata همیشه مسدود؛ دامنه‌ها قبل از اتصال با DoH بررسی می‌شوند؛ لیست پورت مجاز
+- rate limit: ورود، setup، ارتقای WebSocket، اشتراک‌گیری — همه per-IP
+- سقف اتصال ۵ از ۶ اتصال خروجی Cloudflare
+- رمز ادمین PBKDF2، session ۱۹۲ بیتی، ضد CSRF، تغییر رمز = بی‌اعتباری همه‌ی sessionها
+
+جزئیات کامل: [`docs/AUDIT.md`](docs/AUDIT.md) و [`docs/RESEARCH-ban-rootcause.md`](docs/RESEARCH-ban-rootcause.md)
+
+## وضعیت
+
+تست‌های سبز: یونیت + رگرسیون امنیتی + E2E زنده‌ی HTTP + E2E زنده‌ی تونل WS؛ `tsc --noEmit` پاک؛ `dist/worker.js` تمیز از اسکنر امضا. شمار دقیق را در `docs/AUDIT.md` ببین.
