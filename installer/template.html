@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>نصب‌کنندهٔ آزاد</title>
+<style>
+@font-face { font-family: Vazirmatn; font-weight: 100 900; font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/vazirmatn@1.0.3/dist/Vazirmatn-Variable-font.woff2") format("woff2"); }
+:root {
+  --bg: #0b1020; --card: #121a33; --card2: #0f1730; --line: #243056;
+  --txt: #e8edff; --mut: #93a0c8; --acc: #4f8cff; --acc2: #7c5cff;
+  --ok: #2fd48f; --err: #ff6482; --warn: #ffb454;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Vazirmatn, Tahoma, "Segoe UI", system-ui, sans-serif;
+  background: radial-gradient(1200px 600px at 80% -10%, #1b2a63 0%, transparent 60%),
+              radial-gradient(900px 500px at 10% 110%, #2a1b63 0%, transparent 55%), var(--bg);
+  color: var(--txt); min-height: 100vh; line-height: 1.7; padding: 24px 14px 60px;
+}
+.wrap { max-width: 880px; margin: 0 auto; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; }
+.logo .dot { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--acc), var(--acc2));
+  display: grid; place-items: center; font-size: 17px; box-shadow: 0 6px 18px -6px var(--acc); }
+.lang { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px;
+  padding: 7px 14px; cursor: pointer; font-family: inherit; font-size: 13px; }
+.card { background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid var(--line);
+  border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 14px 34px -22px #000; }
+.card h2 { font-size: 16px; margin-bottom: 4px; display: flex; align-items: center; gap: 9px; }
+.card h2 .n { width: 26px; height: 26px; border-radius: 8px; background: #1d2b55; color: var(--acc);
+  display: grid; place-items: center; font-size: 13px; flex: none; }
+.sub { color: var(--mut); font-size: 13px; margin-bottom: 14px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+label.f { display: block; margin-top: 12px; font-size: 13px; color: var(--mut); }
+input, textarea { width: 100%; margin-top: 6px; background: #0a1126; color: var(--txt);
+  border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; font-family: inherit; font-size: 14px; }
+input:focus, textarea:focus { outline: none; border-color: var(--acc); }
+textarea.code { direction: ltr; text-align: left; font-family: Consolas, monospace; font-size: 12px; height: 130px; }
+button { background: linear-gradient(135deg, var(--acc), var(--acc2)); color: #fff; border: 0;
+  border-radius: 10px; padding: 11px 20px; font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: transform .12s, filter .12s; }
+button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+button.ghost { background: #1a2650; border: 1px solid var(--line); font-weight: 600; }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-main { min-width: 190px; }
+.hint { background: #10203f; border: 1px dashed #2c4a8a; color: #bcd0ff; padding: 10px 13px;
+  border-radius: 10px; font-size: 13px; margin-top: 12px; }
+code.inline { background: #0a1126; border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px;
+  direction: ltr; unicode-bidi: embed; font-size: 12px; }
+#log { margin-top: 14px; direction: ltr; text-align: left; font-family: Consolas, monospace;
+  font-size: 12.5px; background: #0a1126; border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; max-height: 220px; overflow: auto; display: none; white-space: pre-wrap; }
+.log-line { padding: 1px 0; }
+.log-line.ok { color: var(--ok); } .log-line.err { color: var(--err); } .log-line.info { color: var(--mut); }
+.done { display: none; text-align: center; padding: 6px 0 2px; }
+.done .url { direction: ltr; unicode-bidi: embed; font-family: Consolas, monospace; font-size: 14px;
+  background: #0a1126; border: 1px solid var(--ok); color: var(--ok); border-radius: 10px;
+  padding: 12px; margin: 12px auto; word-break: break-all; max-width: 560px; }
+.done h3 { color: var(--ok); font-size: 17px; }
+.status { font-size: 13px; color: var(--mut); margin-top: 8px; }
+.status.bad { color: var(--err); } .status.good { color: var(--ok); }
+.step-dim { opacity: .45; pointer-events: none; }
+footer { text-align: center; color: #5b689a; font-size: 12px; margin-top: 26px; }
+@media (max-width: 560px) { .card { padding: 16px; } .logo { font-size: 17px; } .btn-main { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><span class="dot">⚡</span><span data-fa="نصب‌کنندهٔ آزاد" data-en="Azad Installer">نصب‌کنندهٔ آزاد</span></div>
+    <button class="lang" id="langBtn">English</button>
+  </header>
+
+  <!-- step 0: proxy -->
+  <section class="card" id="step0">
+    <h2><span class="n">۰</span><span data-fa="پروکسی نصب (یک بار)" data-en="Installer proxy (one-time)">پروکسی نصب (یک بار)</span></h2>
+    <p class="sub" data-fa="مرورگر به API کلودفلر دسترسی مستقیم ندارد؛ این پروکسی کوچک را یک بار روی اکانت خودت بساز. بعد از این مرحله، همه‌چیز خودکار است."
+       data-en="Browsers cannot call the Cloudflare API directly (CORS). Deploy this tiny proxy on your own account once — after that everything is automatic.">مرورگر به API کلودفلر دسترسی مستقیم ندارد؛ این پروکسی کوچک را یک بار روی اکانت خودت بساز. بعد از این مرحله، همه‌چیز خودکار است.</p>
+    <div class="row">
+      <button class="ghost" id="copyProxyBtn" data-fa="کپی کد پروکسی" data-en="Copy proxy code">کپی کد پروکسی</button>
+      <a class="btn-a" href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create" target="_blank" rel="noopener">
+        <button class="ghost" data-fa="باز کردن داشبورد ورکر" data-en="Open Worker dashboard">باز کردن داشبورد ورکر</button></a>
+    </div>
+    <label class="f" data-fa="آدرس پروکسی پس از استقرار (مثلاً my-proxy.workers.dev)" data-en="Proxy URL after deploy (e.g. my-proxy.workers.dev)">آدرس پروکسی پس از استقرار (مثلاً my-proxy.workers.dev)</label>
+    <input id="proxyUrl" dir="ltr" placeholder="https://xxxx.workers.dev" />
+    <div class="hint" data-fa="کد کپی‌شده را در ویرایشگر کد داشبورد Paste کن، «Save and Deploy» بزن، بعد آدرس ورکر را بالا بگذار."
+         data-en="Paste the code in the dashboard editor, hit «Save and Deploy», then put the worker URL above.">کد کپی‌شده را در ویرایشگر کد داشبورد Paste کن، «Save and Deploy» بزن، بعد آدرس ورکر را بالا بگذار.</div>
+  </section>
+
+  <!-- step 1: token -->
+  <section class="card" id="step1">
+    <h2><span class="n">۱</span><span data-fa="توکن دسترسی" data-en="API token">توکن دسترسی</span></h2>
+    <p class="sub" data-fa="دکمه را بزن — داشبورد کلودفلر با دسترسی‌های از‌پیش‌انتخاب‌‌شده باز می‌شود. Create Token، کپی، و اینجا Paste کن."
+       data-en="Click the button — Cloudflare opens with permissions pre-selected. Create Token, copy it, paste it here.">دکمه را بزن — داشبورد کلودفلر با دسترسی‌های از‌پیش‌انتخاب‌‌شده باز می‌شود. Create Token، کپی، و اینجا Paste کن.</p>
+    <div class="row">
+      <a id="tokenLink" target="_blank" rel="noopener"><button data-fa="ساخت توکن در کلودفلر" data-en="Create token on Cloudflare">ساخت توکن در کلودفلر</button></a>
+      <button class="ghost btn-main" id="verifyBtn" data-fa="تأیید و دریافت اکانت" data-en="Verify & fetch account">تأیید و دریافت اکانت</button>
+    </div>
+    <label class="f" data-fa="توکن (فقط همین صفحه؛ جایی ذخیره نمی‌شود)" data-en="Token (this page only; never stored)">توکن (فقط همین صفحه؛ جایی ذخیره نمی‌شود)</label>
+    <input id="token" dir="ltr" type="password" placeholder="••••••••••••••••" />
+    <div class="status" id="step1Status"></div>
+  </section>
+
+  <!-- step 2: config -->
+  <section class="card step-dim" id="step2">
+    <h2><span class="n">۲</span><span data-fa="تنظیمات" data-en="Settings">تنظیمات</span></h2>
+    <label class="f" data-fa="نام ورکر (در آدرس اینترنتی می‌آید)" data-en="Worker name (appears in the URL)">نام ورکر (در آدرس اینترنتی می‌آید)</label>
+    <input id="workerName" dir="ltr" value="azad-gw" />
+    <label class="f" data-fa="نام پایگاه دادهٔ KV" data-en="KV namespace name">نام پایگاه دادهٔ KV</label>
+    <input id="kvTitle" dir="ltr" value="azad-kv" />
+    <label class="f" data-fa="زیردامنهٔ workers.dev (خالی = همان فعلی اکانت)" data-en="workers.dev subdomain (empty = current)">زیردامنهٔ workers.dev (خالی = همان فعلی اکانت)</label>
+    <input id="subDomain" dir="ltr" placeholder="myname" />
+  </section>
+
+  <!-- step 3: deploy -->
+  <section class="card step-dim" id="step3">
+    <h2><span class="n">۳</span><span data-fa="استقرار" data-en="Deploy">استقرار</span></h2>
+    <p class="sub" data-fa="ورکر + پایگاه‌داده ساخته یا آپدیت می‌شوند؛ اجرای دوباره = آپدیت بی‌خطر."
+       data-en="Creates or updates the worker + KV. Running again = safe update.">ورکر + پایگاه‌داده ساخته یا آپدیت می‌شوند؛ اجرای دوباره = آپدیت بی‌خطر.</p>
+    <div class="row"><button class="btn-main" id="deployBtn" data-fa="🚀 استقرار خودکار" data-en="🚀 Deploy">🚀 استقرار خودکار</button></div>
+    <div id="log"></div>
+    <div class="done" id="done">
+      <h3 data-fa="✅ تمام شد" data-en="✅ Done">✅ تمام شد</h3>
+      <div class="url" id="resultUrl"></div>
+      <div class="row" style="justify-content:center">
+        <a id="openLink" target="_blank" rel="noopener"><button data-fa="باز کردن پنل" data-en="Open panel">باز کردن پنل</button></a>
+        <button class="ghost" id="copyUrlBtn" data-fa="کپی آدرس" data-en="Copy URL">کپی آدرس</button>
+      </div>
+      <p class="sub" style="margin-top:12px" data-fa="باز کردن آدرس، خودش به صفحهٔ ساخت رمز می‌برد — رمز بذار، وارد پنل شو، از «کاربرها» لینک اشتراک و کانفیگ بگیر."
+         data-en="Opening the URL lands on the password setup page — set a password, enter the panel, then grab subscription links from «Users».">باز کردن آدرس، خودش به صفحهٔ ساخت رمز می‌برد — رمز بذار، وارد پنل شو، از «کاربرها» لینک اشتراک و کانفیگ بگیر.</p>
+    </div>
+  </section>
+
+  <footer>Azad Installer — only your own Cloudflare account is touched; the proxy never stores your token.</footer>
+</div>
+
+<script>
+const WORKER_SRC = __AZAD_WORKER__;
+const PROXY_SRC = __AZAD_PROXY__;
+
+const $ = (s) => document.querySelector(s);
+const state = { token: '', accountId: '', subdomain: '' };
+const apiBase = 'https://api.cloudflare.com/client/v4';
+
+// ---- language ----
+const LANG = { fa: 1, en: 1 };
+function t(key) { return T[key] ? (LANG.now === 'fa' ? T[key].fa : T[key].en) : key; }
+const T = {
+  verify_ok: { fa: 'توکن معتبر است ✓ اکانت دریافت شد', en: 'Token valid ✓ account loaded' },
+  verify_need_proxy: { fa: 'اول آدرس پروکسی را بگذار', en: 'Set the proxy URL first' },
+  verify_need_token: { fa: 'توکن را Paste کن', en: 'Paste your token' },
+  need_proxy: { fa: 'پروکسی تنظیم نشده', en: 'Proxy not set' },
+  need_verify: { fa: 'اول توکن را تأیید کن', en: 'Verify the token first' },
+  bad_json: { fa: 'پاسخ نامعتبر از API', en: 'Invalid API response' },
+};
+let lang = 'fa';
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  document.title = lang === 'fa' ? 'نصب‌کنندهٔ آزاد' : 'Azad Installer';
+  document.querySelectorAll('[data-fa]').forEach((el) => {
+    el.textContent = el.getAttribute(lang === 'fa' ? 'data-fa' : 'data-en');
+  });
+  $('#langBtn').textContent = lang === 'fa' ? 'English' : 'فارسی';
+}
+$('#langBtn').onclick = () => { lang = lang === 'fa' ? 'en' : 'fa'; applyLang(); };
+LANG.now = 'fa';
+
+// ---- token creation link (pre-selected permissions) ----
+const perms = [
+  { key: 'workers_scripts', type: 'edit' },
+  { key: 'workers_kv_storage', type: 'edit' },
+  { key: 'account_settings', type: 'read' },
+  { key: 'workers_subdomain', type: 'edit' },
+];
+$('#tokenLink').href =
+  'https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=' +
+  encodeURIComponent(JSON.stringify(perms)) +
+  '&accountId=*&zoneId=all&name=' + encodeURIComponent('Azad Installer');
+
+// ---- persisted bits (never the token) ----
+$('#proxyUrl').value = localStorage.getItem('azad_proxy') || '';
+$('#proxyUrl').addEventListener('change', () => localStorage.setItem('azad_proxy', $('#proxyUrl').value.trim()));
+if (localStorage.getItem('azad_lang') === 'en') { lang = 'en'; }
+
+// ---- helpers ----
+function proxy() { return ($('#proxyUrl').value || '').replace(/\/+$/, ''); }
+function bearer() { return 'Bearer ' + ($('#token').value || '').trim(); }
+
+async function api(path, method, body) {
+  const p = proxy();
+  if (!p) throw new Error(t('need_proxy'));
+  const headers = { Authorization: bearer(), 'X-Proxy-Target': apiBase + path };
+  const init = { method: method || 'GET', headers };
+  if (body instanceof FormData) init.body = body;
+  else if (body !== undefined) { headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(body); }
+  const r = await fetch(p, init);
+  const text = await r.text();
+  let j; try { j = JSON.parse(text); } catch { throw new Error(t('bad_json') + ' ' + text.slice(0, 160)); }
+  if (!j.success) throw new Error((j.errors && j.errors[0] && j.errors[0].message) || ('HTTP ' + r.status));
+  return j;
+}
+
+function log(msg, cls) {
+  const el = $('#log'); el.style.display = 'block';
+  const d = document.createElement('div'); d.className = 'log-line ' + (cls || 'info');
+  d.textContent = (cls === 'ok' ? '✓ ' : cls === 'err' ? '✗ ' : '· ') + msg; el.appendChild(d); el.scrollTop = el.scrollHeight;
+}
+function status(sel, msg, cls) { const e = $(sel); e.textContent = msg; e.className = 'status ' + (cls || ''); }
+
+// ---- step 1: verify ----
+$('#verifyBtn').onclick = async () => {
+  const btn = $('#verifyBtn'); btn.disabled = true;
+  try {
+    if (!proxy()) throw new Error(t('verify_need_proxy'));
+    if (!$('#token').value.trim()) throw new Error(t('verify_need_token'));
+    await api('/user/tokens/verify');
+    const accs = (await api('/accounts')).result;
+    if (!accs || !accs.length) throw new Error('no account on this token');
+    state.accountId = accs[0].id;
+    status('#step1Status', t('verify_ok') + ' — ' + accs[0].name, 'good');
+    $('#step2').classList.remove('step-dim');
+    $('#step3').classList.remove('step-dim');
+  } catch (e) { status('#step1Status', String(e.message || e), 'bad'); }
+  finally { btn.disabled = false; }
+};
+
+// ---- step 3: deploy ----
+$('#deployBtn').onclick = async () => {
+  const btn = $('#deployBtn'); btn.disabled = true; $('#done').style.display = 'none';
+  $('#log').innerHTML = ''; const name = $('#workerName').value.trim() || 'azad-gw';
+  try {
+    if (!state.accountId) throw new Error(t('need_verify'));
+    const A = '/accounts/' + state.accountId;
+
+    // 1) workers.dev subdomain
+    log('checking workers.dev subdomain…');
+    const sub = (await api('/workers/subdomain')).result || {};
+    let subdomain = sub.subdomain;
+    const want = ($('#subDomain').value || '').trim();
+    if (!subdomain && want) { await api('/workers/subdomain', 'PATCH', { subdomain: want }); subdomain = want; }
+    if (want && subdomain && want !== subdomain) { await api('/workers/subdomain', 'PATCH', { subdomain: want }); subdomain = want; }
+    if (!subdomain) throw new Error('workers.dev subdomain not set — fill step 2');
+    state.subdomain = subdomain;
+    log('workers.dev: ' + subdomain, 'ok');
+
+    // 2) KV namespace (reuse by title, else create)
+    log('checking KV namespace…');
+    let ns = (await api(A + '/storage/kv/namespaces?per_page=100')).result
+      .find((n) => n.title === ($('#kvTitle').value || 'azad-kv'));
+    if (!ns) ns = (await api(A + '/storage/kv/namespaces', 'POST', { title: $('#kvTitle').value || 'azad-kv' })).result;
+    log('KV: ' + ns.title + ' (' + ns.id + ')', 'ok');
+
+    // 3) upload / update the worker (ESM module + KV binding)
+    log('uploading worker…');
+    const fd = new FormData();
+    fd.append('metadata', new Blob([JSON.stringify({
+      main_module: 'worker.js',
+      compatibility_date: '2026-09-24',
+      bindings: [{ type: 'kv_namespace', name: 'KV', namespace_id: ns.id }],
+    })], { type: 'application/json' }));
+    fd.append('worker.js', new Blob([WORKER_SRC], { type: 'application/javascript+module' }), 'worker.js');
+    const up = await api(A + '/workers/scripts/' + encodeURIComponent(name), 'PUT', fd);
+    log('worker deployed' + (up.result && up.result.id ? ': ' + up.result.id : ''), 'ok');
+
+    // 4) make sure workers.dev routing is on
+    try { await api(A + '/workers/scripts/' + encodeURIComponent(name) + '/settings', 'PUT', { workers_dev: true }); }
+    catch (e) { log('workers_dev setting skipped: ' + e.message, 'info'); }
+
+    // 5) result
+    const url = 'https://' + name + '.' + subdomain + '.workers.dev';
+    $('#resultUrl').textContent = url;
+    $('#openLink').href = url;
+    $('#done').style.display = 'block';
+    log('ready → ' + url, 'ok');
+  } catch (e) { log(String(e.message || e), 'err'); }
+  finally { btn.disabled = false; }
+};
+
+// ---- copy buttons ----
+function copy(text, btn, origAttr) {
+  navigator.clipboard.writeText(text).then(() => {
+    const old = btn.textContent; btn.textContent = lang === 'fa' ? 'کپی شد ✓' : 'Copied ✓';
+    setTimeout(() => btn.textContent = old, 1600);
+  });
+}
+$('#copyProxyBtn').onclick = (e) => copy(PROXY_SRC, e.target.closest('button'));
+$('#copyUrlBtn').onclick = (e) => copy($('#resultUrl').textContent, e.target.closest('button'));
+
+applyLang();
+</script>
+</body>
+</html>

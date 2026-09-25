@@ -123,6 +123,20 @@ export const FONT_B64: string = ${JSON.stringify(fontB64)};
   ].join('\n');
 
   await mkdir(outDir, { recursive: true });
+  // generate installer/index.html with the current worker + proxy embedded
+  const tpl = await readFile(path.join(root, 'installer/template.html'), 'utf8');
+  // JSON.stringify alone is not enough: a literal </script> inside any
+  // embedded HTML blob would terminate the installer's own <script> tag.
+  // '<\/' keeps the exact same string value but is invisible to the parser.
+  const jsLiteral = (s) => JSON.stringify(s).split('</').join('<\\/');
+  const proxySrc = await readFile(path.join(root, 'installer/proxy.js'), 'utf8');
+  // function replacers: string replacements would expand $& / $' etc.
+  const installer = tpl
+    .replace('__AZAD_WORKER__', () => jsLiteral(code))
+    .replace('__AZAD_PROXY__', () => jsLiteral(proxySrc));
+  await writeFile(path.join(root, 'installer/index.html'), installer, 'utf8');
+  console.log(`• installer/index.html — ${(installer.length / 1024).toFixed(1)} KB (worker embedded)`);
+
   // _worker.js at the repo root — the exact filename users paste into the
   // Cloudflare dashboard (and the same convention edgetunnel/nahan ship with)
   await writeFile(path.join(root, '_worker.js'), code, 'utf8');
